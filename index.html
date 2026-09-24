@@ -1,0 +1,1617 @@
+<!DOCTYPE html>
+<html lang="pt" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Road Log Moto">
+  <meta name="theme-color" content="#0B0E14">
+  <link rel="manifest" href="manifest.json">
+  <title>Road Log Moto — Viagem Piódão</title>
+
+  <!-- Tailwind CSS & Leaflet -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    /* Estilos de Cockpit de Moto e Ergonomia Mobile */
+    :root {
+      --bg-main: #0B0E14;
+      --bg-card: #151A23;
+      --bg-card-hover: #1E2532;
+      --border-color: #232B3A;
+      --text-main: #F1F5F9;
+      --text-muted: #94A3B8;
+      --accent-blue: #2F80ED;
+      --accent-orange: #F2994A;
+      --accent-green: #27AE60;
+      --accent-purple: #9B51E0;
+      --accent-red: #EB5757;
+    }
+
+    body.sunlight-mode {
+      --bg-main: #F8FAFC;
+      --bg-card: #FFFFFF;
+      --bg-card-hover: #EDF2F7;
+      --border-color: #CBD5E1;
+      --text-main: #0F172A;
+      --text-muted: #475569;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior-y: none;
+    }
+
+    /* Suporte de Área Segura para iPhone (Notch & Home Bar) */
+    .safe-top {
+      padding-top: env(safe-area-inset-top, 12px);
+    }
+    .safe-bottom {
+      padding-bottom: env(safe-area-inset-bottom, 16px);
+    }
+
+    .card-surface {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border-color);
+    }
+
+    .touch-target {
+      min-height: 52px;
+      touch-action: manipulation;
+    }
+
+    /* Scrollbars invisíveis mas funcionais */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Animação do pulso de GPS */
+    @keyframes gpsPulse {
+      0% { transform: scale(0.9); opacity: 1; }
+      50% { transform: scale(1.6); opacity: 0.4; }
+      100% { transform: scale(2.2); opacity: 0; }
+    }
+    .gps-marker-pulse {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(47, 128, 237, 0.4);
+      animation: gpsPulse 1.8s infinite ease-out;
+    }
+
+    /* Botões táteis com feedback instantâneo */
+    .btn-tactile:active {
+      transform: scale(0.97);
+      filter: brightness(0.9);
+    }
+
+    /* Estilo de mapa Leaflet em Dark Mode */
+    .dark .leaflet-tile {
+      filter: brightness(0.78) invert(1) contrast(3.2) hue-rotate(200deg) saturate(0.35);
+    }
+    .leaflet-popup-content-wrapper {
+      background: #151A23 !important;
+      color: #F1F5F9 !important;
+      border-radius: 12px !important;
+      border: 1px solid #232B3A !important;
+    }
+    .leaflet-popup-tip {
+      background: #151A23 !important;
+    }
+  </style>
+</head>
+<body class="flex flex-col h-screen overflow-hidden select-none">
+
+  <!-- CABEÇALHO SUPERIOR (HUD / BARRA DE ESTADO) -->
+  <header class="safe-top bg-opacity-95 backdrop-filter backdrop-blur-md card-surface border-b z-30 px-4 py-3 flex items-center justify-between shadow-lg">
+    <div class="flex items-center space-x-2.5">
+      <div class="w-10 h-10 rounded-xl bg-blue-600 bg-opacity-20 flex items-center justify-center border border-blue-500 border-opacity-40">
+        <span class="text-xl">🏍️</span>
+      </div>
+      <div>
+        <h1 class="text-base font-extrabold tracking-tight leading-none" id="headerTitle">Viagem Piódão</h1>
+        <p class="text-xs text-gray-400 font-medium mt-0.5" id="headerSubtitle">20 a 24 Set · 635 km</p>
+      </div>
+    </div>
+    
+    <div class="flex items-center space-x-2">
+      <!-- Alternador Modo Sol / Noite -->
+      <button id="btnThemeToggle" class="p-2.5 rounded-xl card-surface border text-gray-300 active:bg-gray-800 transition" title="Modo Sol / Alto Contraste">
+        <i data-lucide="sun" class="w-5 h-5 text-yellow-400"></i>
+      </button>
+      <!-- Estado de Ligação / Offline -->
+      <div id="netStatusBadge" class="flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-green-950 text-green-400 border border-green-800">
+        <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+        <span id="netStatusText">ONLINE</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTEÚDO PRINCIPAL (ÁREA DESLIZANTE COM 5 ECRÃS) -->
+  <main id="mainContainer" class="flex-1 overflow-y-auto no-scrollbar pb-24 p-4">
+
+    <!-- ========================================================= -->
+    <!-- ECRÃ 1: COCKPIT / HOJE (HUD PARA QUANDO SE ESTÁ NA MOTA) -->
+    <!-- ========================================================= -->
+    <section id="tabCockpit" class="space-y-4">
+      
+      <!-- Seletor Rápido de Dias no Topo -->
+      <div class="flex space-x-2 overflow-x-auto no-scrollbar py-1" id="dayPillsContainer">
+        <!-- Gerado dinamicamente -->
+      </div>
+
+      <!-- CARTÃO PRINCIPAL HERO DO DIA SELECIONADO -->
+      <div id="heroCard" class="rounded-2xl p-5 card-surface shadow-xl relative overflow-hidden border-t-4 border-blue-500">
+        <div class="flex justify-between items-start">
+          <span id="cockpitDayBadge" class="px-2.5 py-1 rounded-md text-xs font-black uppercase tracking-wider bg-blue-900 bg-opacity-40 text-blue-400 border border-blue-700 border-opacity-40">
+            DIA 1 · DOMINGO 20 SET
+          </span>
+          <span id="cockpitRoadType" class="text-xs font-semibold px-2 py-1 rounded bg-gray-800 text-gray-300">
+            🛣️ Autoestrada
+          </span>
+        </div>
+
+        <h2 id="cockpitTitle" class="text-2xl font-black mt-2 tracking-tight">Benção e Romance</h2>
+        <p id="cockpitRoute" class="text-sm text-gray-400 font-medium mt-0.5">Cascais → Fátima → Coimbra</p>
+
+        <!-- Métricas Rápidas (Chips) -->
+        <div class="grid grid-cols-3 gap-2 mt-4">
+          <div class="bg-gray-800 bg-opacity-60 rounded-xl p-2.5 text-center border border-gray-700 border-opacity-50">
+            <span class="text-xs text-gray-400 block font-medium">Distância</span>
+            <span id="metricKm" class="text-lg font-black text-white">225 km</span>
+          </div>
+          <div class="bg-gray-800 bg-opacity-60 rounded-xl p-2.5 text-center border border-gray-700 border-opacity-50">
+            <span class="text-xs text-gray-400 block font-medium">Condução</span>
+            <span id="metricTime" class="text-lg font-black text-white">2h30</span>
+          </div>
+          <div class="bg-gray-800 bg-opacity-60 rounded-xl p-2.5 text-center border border-gray-700 border-opacity-50">
+            <span class="text-xs text-gray-400 block font-medium">Paragens</span>
+            <span id="metricStops" class="text-lg font-black text-white">3</span>
+          </div>
+        </div>
+
+        <!-- BOTÕES GIGANTES DE NAVEGAÇÃO 1-TOQUE -->
+        <div class="grid grid-cols-2 gap-2.5 mt-5">
+          <a id="btnNavGoogle" href="#" target="_blank" class="btn-tactile touch-target flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-xl shadow-lg shadow-blue-900/40 text-sm">
+            <i data-lucide="navigation" class="w-5 h-5"></i>
+            <span>Google Maps</span>
+          </a>
+          <a id="btnNavWaze" href="#" target="_blank" class="btn-tactile touch-target flex items-center justify-center space-x-2 bg-purple-600 hover:bg-purple-500 text-white font-extrabold rounded-xl shadow-lg shadow-purple-900/40 text-sm">
+            <i data-lucide="compass" class="w-5 h-5"></i>
+            <span>Abrir Waze</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- ALERTA DE COMBUSTÍVEL / SEGURANÇA (SE HOUVER) -->
+      <div id="fuelAlertBox" class="hidden rounded-xl p-3.5 bg-yellow-950 bg-opacity-50 border border-yellow-700 text-yellow-300 flex items-start space-x-3">
+        <i data-lucide="fuel" class="w-6 h-6 flex-shrink-0 text-yellow-400 mt-0.5"></i>
+        <div class="text-xs font-semibold leading-relaxed" id="fuelAlertText">
+          Alerta de combustível na serra.
+        </div>
+      </div>
+
+      <!-- PREVISÃO METEOROLÓGICA DAS PARAGENS DO DIA -->
+      <div class="card-surface rounded-2xl p-4 shadow">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="cloud-sun" class="w-4 h-4 text-blue-400"></i>
+            <span class="text-xs font-extrabold uppercase tracking-wider text-gray-400">Tempo na Estrada</span>
+          </div>
+          <span class="text-xs text-gray-500" id="weatherSyncTime">Previsão por local</span>
+        </div>
+        <div class="flex space-x-2.5 overflow-x-auto no-scrollbar pb-1" id="weatherScrollContainer">
+          <!-- Carregado via API ou dados calculados -->
+        </div>
+      </div>
+
+      <!-- PRÓXIMA PARAGEM & CRONOGRAMA RÁPIDO -->
+      <div class="card-surface rounded-2xl p-4 shadow">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="clock" class="w-4 h-4 text-green-400"></i>
+            <span class="text-xs font-extrabold uppercase tracking-wider text-gray-400">Horário & Etapas</span>
+          </div>
+          <span class="text-xs text-blue-400 font-bold" id="nextStopCount">Hoje</span>
+        </div>
+        <div class="space-y-2.5" id="cockpitTimeline">
+          <!-- Itens do horário -->
+        </div>
+      </div>
+
+      <!-- DICA DE PILOTAGEM / EQUIPAMENTO -->
+      <div class="rounded-xl p-3.5 card-surface border-l-4 border-yellow-500 flex items-center space-x-3">
+        <span class="text-2xl">🧳</span>
+        <p id="cockpitTip" class="text-xs font-semibold text-gray-300 leading-snug">
+          Dica do dia para a condução.
+        </p>
+      </div>
+
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- ECRÃ 2: ROTEIRO COMPLETO (DETALHES, COMER & DORMIR) -->
+    <!-- ========================================================= -->
+    <section id="tabRoteiro" class="hidden space-y-4">
+      
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-black tracking-tight">Roteiro da Viagem</h2>
+        <span class="text-xs font-bold text-gray-400">5 Etapas · 20 a 24 Set</span>
+      </div>
+
+      <!-- Lista de Dias em Accordion / Cartões de Alta Legibilidade -->
+      <div class="space-y-3" id="roteiroDaysList">
+        <!-- Renderizado dinamicamente -->
+      </div>
+
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- ECRÃ 3: MAPA INTERATIVO (LEAFLET COM GPS E ROTAS) -->
+    <!-- ========================================================= -->
+    <section id="tabMapa" class="hidden h-full flex flex-col space-y-2">
+      <div class="flex items-center justify-between px-1">
+        <div class="flex items-center space-x-2">
+          <span class="text-xs font-extrabold uppercase tracking-wider text-gray-400">Mapa do Roteiro</span>
+          <span id="mapDayIndicator" class="text-xs px-2 py-0.5 rounded bg-blue-900 text-blue-300 font-bold">Todos os Dias</span>
+        </div>
+        <button id="btnGpsLocate" class="btn-tactile px-3 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold flex items-center space-x-1.5 shadow">
+          <i data-lucide="crosshair" class="w-4 h-4"></i>
+          <span>Onde estou?</span>
+        </button>
+      </div>
+
+      <!-- Container do Mapa -->
+      <div class="relative flex-1 w-full rounded-2xl overflow-hidden card-surface border shadow-inner" style="min-height: 440px;">
+        <div id="leafletMap" class="w-full h-full" style="min-height: 440px;"></div>
+        
+        <!-- Botão de Alternar Traçado do Dia Atual vs Viagem Toda -->
+        <div class="absolute bottom-4 left-4 z-10 flex space-x-2">
+          <button id="btnMapFilterDay" class="btn-tactile px-3 py-2 rounded-xl bg-gray-900 bg-opacity-90 backdrop-filter backdrop-blur-md text-white text-xs font-extrabold border border-gray-700 shadow-lg">
+            Ver apenas Dia <span id="mapFilterDayNum">1</span>
+          </button>
+          <button id="btnMapShowAll" class="btn-tactile px-3 py-2 rounded-xl bg-gray-900 bg-opacity-90 backdrop-filter backdrop-blur-md text-gray-300 text-xs font-bold border border-gray-700 shadow-lg">
+            Ver Rota Toda
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- ECRÃ 4: DIÁRIO DE BORDO (ROAD LOG COM VOZ, FOTOS E SUPABASE) -->
+    <!-- ========================================================= -->
+    <section id="tabDiario" class="hidden space-y-4">
+      
+      <!-- Entrada Rápida de Nova Nota -->
+      <div class="card-surface rounded-2xl p-4 shadow-xl border-t-4 border-green-500">
+        <div class="flex items-center justify-between mb-2.5">
+          <h3 class="text-sm font-extrabold uppercase tracking-wider text-green-400 flex items-center space-x-1.5">
+            <i data-lucide="pen-tool" class="w-4 h-4"></i>
+            <span>Nova Nota de Estrada</span>
+          </h3>
+          <span class="text-xs text-gray-400" id="diarioDayLabel">Dia 1</span>
+        </div>
+
+        <!-- Chips de Categoria Rápida (1-Toque) -->
+        <div class="flex space-x-1.5 overflow-x-auto no-scrollbar py-1 mb-2.5" id="categoryChips">
+          <button class="cat-chip px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-800 text-gray-300 border border-gray-700 active:bg-blue-600" data-cat="⛽ Abastecimento">⛽ Abastecimento</button>
+          <button class="cat-chip px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-800 text-gray-300 border border-gray-700 active:bg-blue-600" data-cat="☕ Paragem / Café">☕ Café</button>
+          <button class="cat-chip px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-800 text-gray-300 border border-gray-700 active:bg-blue-600" data-cat="🍽️ Almoço / Jantar">🍽️ Comer</button>
+          <button class="cat-chip px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-800 text-gray-300 border border-gray-700 active:bg-blue-600" data-cat="📸 Ponto Alto">📸 Foto</button>
+          <button class="cat-chip px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-800 text-gray-300 border border-gray-700 active:bg-blue-600" data-cat="⚠️ Atenção">⚠️ Alerta</button>
+        </div>
+
+        <!-- Área de Texto com Ditado por Voz -->
+        <div class="relative">
+          <textarea id="txtNoteInput" rows="3" placeholder="O que aconteceu? Onde pararam, estado do piso, almoço..." class="w-full p-3 rounded-xl bg-gray-900 border border-gray-700 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-green-500 leading-relaxed"></textarea>
+          
+          <!-- Botão de Ditado por Voz (Speech-to-Text) -->
+          <button id="btnVoiceDictate" class="absolute bottom-3 right-3 p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-600 btn-tactile" title="Ditar por voz (sem luvas)">
+            <i data-lucide="mic" class="w-4 h-4 text-green-400"></i>
+          </button>
+        </div>
+
+        <!-- Autor e Ações -->
+        <div class="grid grid-cols-2 gap-2 mt-2.5">
+          <input id="txtNoteAuthor" type="text" placeholder="Quem escreve (opcional)" class="p-2.5 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-green-500">
+          
+          <!-- Botão de Foto / Vídeo -->
+          <label class="btn-tactile flex items-center justify-center space-x-1.5 p-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-white text-xs font-bold border border-gray-700 cursor-pointer">
+            <i data-lucide="camera" class="w-4 h-4 text-blue-400"></i>
+            <span id="lblPhotoCount">Foto / Vídeo</span>
+            <input id="filePhotoInput" type="file" accept="image/*,video/*" class="hidden" multiple>
+          </label>
+        </div>
+
+        <button id="btnSaveNote" class="btn-tactile touch-target w-full mt-3 flex items-center justify-center space-x-2 bg-green-600 hover:bg-green-500 text-white font-extrabold rounded-xl text-sm shadow-lg shadow-green-900/30">
+          <i data-lucide="check-circle" class="w-5 h-5"></i>
+          <span>Guardar no Diário</span>
+        </button>
+      </div>
+
+      <!-- Configuração / Sincronização Supabase -->
+      <div class="card-surface rounded-xl p-3 flex items-center justify-between text-xs">
+        <div class="flex items-center space-x-2">
+          <i data-lucide="cloud" class="w-4 h-4 text-blue-400"></i>
+          <span id="cloudStatusText" class="text-gray-300 font-medium">Modo Local (Offline-Ready)</span>
+        </div>
+        <button id="btnOpenCloudModal" class="text-blue-400 font-bold hover:underline">
+          Configurar Nuvem
+        </button>
+      </div>
+
+      <!-- Lista de Notas do Diário -->
+      <div class="space-y-3" id="diarioFeedContainer">
+        <!-- Inseridas dinamicamente -->
+      </div>
+
+    </section>
+
+    <!-- ========================================================= -->
+    <!-- ECRÃ 5: SOS, COMBUSTÍVEL & FERRAMENTAS -->
+    <!-- ========================================================= -->
+    <section id="tabSOS" class="hidden space-y-4">
+      
+      <!-- CARTÃO DE EMERGÊNCIA CRÍTICA (112 & COORDENADAS) -->
+      <div class="rounded-2xl p-5 bg-red-950 bg-opacity-60 border-2 border-red-600 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <span class="text-2xl">🚨</span>
+            <h2 class="text-lg font-black text-red-400 tracking-tight">SOS & Emergência</h2>
+          </div>
+          <span class="px-2 py-1 bg-red-800 text-white text-xs font-black rounded">PORTUGAL</span>
+        </div>
+
+        <!-- Coordenadas Atuais em Letra Gigante de Alto Contraste -->
+        <div class="bg-black bg-opacity-60 p-4 rounded-xl border border-red-800">
+          <span class="text-xs font-bold text-red-300 block mb-1 uppercase tracking-wider">A tua localização GPS exata:</span>
+          <div id="liveGpsCoordsText" class="text-xl font-mono font-black text-white tracking-wide">
+            A obter sinal de satélite...
+          </div>
+          <p class="text-xs text-gray-400 mt-1" id="liveGpsAccuracy">Precisão: -- m</p>
+          <button id="btnCopyCoords" class="mt-2.5 w-full py-2 bg-red-900 bg-opacity-60 hover:bg-red-800 text-red-200 text-xs font-bold rounded-lg flex items-center justify-center space-x-1.5 btn-tactile">
+            <i data-lucide="copy" class="w-4 h-4"></i>
+            <span>Copiar Coordenadas (para SMS / WhatsApp)</span>
+          </button>
+        </div>
+
+        <!-- Botões de Chamada de Emergência -->
+        <div class="grid grid-cols-2 gap-3">
+          <a href="tel:112" class="btn-tactile touch-target flex flex-col items-center justify-center bg-red-600 hover:bg-red-500 text-white rounded-xl font-black text-base shadow-lg">
+            <span>LIGAR 112</span>
+            <span class="text-xs font-normal opacity-80">Emergência Nacional</span>
+          </a>
+          <a href="tel:808242424" class="btn-tactile touch-target flex flex-col items-center justify-center bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-base shadow-lg">
+            <span>SNS 24</span>
+            <span class="text-xs font-normal opacity-80">808 24 24 24</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- GESTÃO DE COMBUSTÍVEL & AUTONOMIA -->
+      <div class="card-surface rounded-2xl p-4 shadow">
+        <div class="flex items-center space-x-2 mb-3">
+          <i data-lucide="fuel" class="w-5 h-5 text-yellow-400"></i>
+          <h3 class="text-sm font-extrabold uppercase tracking-wider">Registo de Abastecimento</h3>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <label class="text-xs text-gray-400 block mb-1">Km Mota</label>
+            <input id="fuelInputKm" type="number" placeholder="ex: 24500" class="w-full p-2.5 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white">
+          </div>
+          <div>
+            <label class="text-xs text-gray-400 block mb-1">Litros (L)</label>
+            <input id="fuelInputLiters" type="number" step="0.1" placeholder="ex: 14.2" class="w-full p-2.5 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white">
+          </div>
+          <div>
+            <label class="text-xs text-gray-400 block mb-1">Total (€)</label>
+            <input id="fuelInputCost" type="number" step="0.01" placeholder="ex: 25.50" class="w-full p-2.5 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white">
+          </div>
+        </div>
+
+        <button id="btnLogFuel" class="btn-tactile touch-target w-full mt-3 bg-yellow-600 hover:bg-yellow-500 text-black font-extrabold rounded-xl text-xs flex items-center justify-center space-x-1.5">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i>
+          <span>Registar Abastecimento no Diário</span>
+        </button>
+      </div>
+
+      <!-- EXPORTAÇÕES & UTILITÁRIOS OFFLINE -->
+      <div class="card-surface rounded-2xl p-4 shadow space-y-2.5">
+        <h3 class="text-sm font-extrabold uppercase tracking-wider text-gray-400 mb-2">GPS & Ficheiros</h3>
+        
+        <button id="btnDownloadAllGpx" class="btn-tactile w-full p-3.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-white font-bold text-xs flex items-center justify-between border border-gray-700">
+          <span class="flex items-center space-x-2">
+            <i data-lucide="download" class="w-4 h-4 text-blue-400"></i>
+            <span>Descarregar GPX Completo (Garmin / OsmAnd)</span>
+          </span>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400"></i>
+        </button>
+
+        <button id="btnDownloadOfflineHtml" class="btn-tactile w-full p-3.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-white font-bold text-xs flex items-center justify-between border border-gray-700">
+          <span class="flex items-center space-x-2">
+            <i data-lucide="file-text" class="w-4 h-4 text-yellow-400"></i>
+            <span>Guardar Guia de Bolso Offline (HTML)</span>
+          </span>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-gray-400"></i>
+        </button>
+
+        <!-- Simulação de Horário para Testes -->
+        <div class="pt-2 border-t border-gray-800">
+          <label class="text-xs text-gray-500 block mb-1">Testar Modo "Durante a Viagem" (Simulação):</label>
+          <div class="flex space-x-2">
+            <select id="selTimeSim" class="p-2 rounded-lg bg-gray-900 border border-gray-700 text-xs text-gray-300 flex-1">
+              <option value="real">Tempo Real (Hoje)</option>
+              <option value="2026-09-20T11:30">Dia 1 · 11:30 (Missa em Fátima)</option>
+              <option value="2026-09-21T13:45">Dia 2 · 13:45 (Almoço no Fajão)</option>
+              <option value="2026-09-22T12:30">Dia 3 · 12:30 (Casal de S. Simão)</option>
+              <option value="2026-09-23T16:30">Dia 4 · 16:30 (Óbidos)</option>
+            </select>
+            <button id="btnApplySim" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold">Aplicar</button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ========================================================= -->
+  <!-- BARRA DE NAVEGAÇÃO INFERIOR FIXA (THUMB-ZONE ERGONÓMICA) -->
+  <!-- ========================================================= -->
+  <nav class="safe-bottom fixed bottom-0 left-0 right-0 card-surface border-t z-40 px-3 py-1.5 flex justify-around items-center shadow-2xl">
+    <button class="nav-tab flex flex-col items-center justify-center p-1.5 w-16 text-blue-500 active:scale-95 transition" data-target="tabCockpit">
+      <i data-lucide="gauge" class="w-6 h-6"></i>
+      <span class="text-[10px] font-bold mt-1">Cockpit</span>
+    </button>
+    <button class="nav-tab flex flex-col items-center justify-center p-1.5 w-16 text-gray-400 active:scale-95 transition" data-target="tabRoteiro">
+      <i data-lucide="map-pin" class="w-6 h-6"></i>
+      <span class="text-[10px] font-bold mt-1">Roteiro</span>
+    </button>
+    <button class="nav-tab flex flex-col items-center justify-center p-1.5 w-16 text-gray-400 active:scale-95 transition" data-target="tabMapa">
+      <i data-lucide="map" class="w-6 h-6"></i>
+      <span class="text-[10px] font-bold mt-1">Mapa</span>
+    </button>
+    <button class="nav-tab flex flex-col items-center justify-center p-1.5 w-16 text-gray-400 active:scale-95 transition" data-target="tabDiario">
+      <i data-lucide="book-open" class="w-6 h-6"></i>
+      <span class="text-[10px] font-bold mt-1">Diário</span>
+    </button>
+    <button class="nav-tab flex flex-col items-center justify-center p-1.5 w-16 text-gray-400 active:scale-95 transition" data-target="tabSOS">
+      <i data-lucide="shield-alert" class="w-6 h-6"></i>
+      <span class="text-[10px] font-bold mt-1">SOS</span>
+    </button>
+  </nav>
+
+  <!-- MODAL DE CONFIGURAÇÃO DE NUVEM (SUPABASE) -->
+  <div id="modalCloud" class="hidden fixed inset-0 bg-black bg-opacity-70 z-50 flex items-center justify-center p-4">
+    <div class="card-surface rounded-2xl p-5 w-full max-w-sm border shadow-2xl space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="text-base font-extrabold flex items-center space-x-2">
+          <i data-lucide="cloud" class="w-5 h-5 text-blue-400"></i>
+          <span>Sincronização Supabase</span>
+        </h3>
+        <button id="btnCloseModal" class="p-1 rounded-lg hover:bg-gray-800 text-gray-400">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <p class="text-xs text-gray-400 leading-relaxed">
+        Configura o acesso ao teu diário permanente. Se deixares em branco, a app guarda tudo no telemóvel em modo 100% offline.
+      </p>
+      <div>
+        <label class="text-xs font-bold text-gray-300 block mb-1">Código de Acesso do Diário</label>
+        <input id="txtCloudCode" type="password" placeholder="••••••••" class="w-full p-3 rounded-xl bg-gray-900 border border-gray-700 text-sm text-white">
+      </div>
+      <div>
+        <label class="text-xs font-bold text-gray-300 block mb-1">Supabase URL (opcional)</label>
+        <input id="txtCloudUrl" type="text" placeholder="https://xyz.supabase.co" class="w-full p-2.5 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white">
+      </div>
+      <div>
+        <label class="text-xs font-bold text-gray-300 block mb-1">Supabase Anon Key (opcional)</label>
+        <input id="txtCloudKey" type="password" placeholder="eyJh..." class="w-full p-2.5 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white">
+      </div>
+      <button id="btnSaveCloudConfig" class="btn-tactile touch-target w-full bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-xl text-sm">
+        Guardar Configuração
+      </button>
+    </div>
+  </div>
+
+  <!-- SCRIPT PRINCIPAL DA APLICAÇÃO -->
+  <script>
+    // ==========================================
+    // DADOS DA VIAGEM (100% EMBUTIDOS & OFFLINE)
+    // ==========================================
+    const DIAS = [
+      {
+        id: 1, titulo: "Benção e Romance", dataStr: "2026-09-20", dataFmt: "Dom, 20 Set",
+        km: 225, min: 150, cor: "#2F80ED", autoestrada: true,
+        paragens: [
+          { nome: "Cascais", lat: 38.6960614, lon: -9.4303646, hora: "09:00" },
+          { nome: "Fátima", lat: 39.6324, lon: -8.6713, hora: "10:30" },
+          { nome: "Coimbra", lat: 40.2033145, lon: -8.4102573, hora: "15:30" }
+        ],
+        horario: [
+          { hora: "09:00", txt: "Saída de Cascais", det: "Via A1/A8" },
+          { hora: "10:30", txt: "Chegada a Fátima", det: "Estacionamento" },
+          { hora: "11:00", txt: "Missa e Benção dos Capacetes", det: "" },
+          { hora: "13:00", txt: "Almoço em Fátima", det: "" },
+          { hora: "14:30", txt: "Saída rumo a Coimbra", det: "" },
+          { hora: "15:30", txt: "Chegada e check-in", det: "Passeio na Quinta das Lágrimas" },
+          { hora: "20:00", txt: "Jantar no Quebra o Galho", det: "Reservado · 12 min a pé" }
+        ],
+        vistas: ["Santuário de Fátima", "Quinta das Lágrimas", "Alta de Coimbra"],
+        comer: [
+          { quando: "Almoço", nome: "Em Fátima", maps: "Restaurantes Fátima" },
+          { quando: "Jantar 20:00", nome: "Quebra o Galho", url: "https://www.quebraogalho.com/", reservado: true,
+            coords: [40.2087486, -8.4282289], a_pe: "~900 m · 12 min a pé do hotel (atravessa a ponte; sobe na Alta)" }
+        ],
+        dormir: { nome: "Five Senses in Coimbra", maps: "Five Senses in Coimbra", reservado: true },
+        combustivel: [],
+        aviso_combustivel: "Dia de autoestrada: áreas de serviço da A8/A1 ao longo de todo o percurso.",
+        dica: "Tiradas rápidas em autoestrada. Tampões de ouvidos e casaco ventilado."
+      },
+      {
+        id: 2, titulo: "O Refúgio no Xisto", dataStr: "2026-09-21", dataFmt: "Seg, 21 Set",
+        km: 95, min: 140, cor: "#E67E22", autoestrada: false,
+        paragens: [
+          { nome: "Coimbra", lat: 40.2033145, lon: -8.4102573, hora: "10:30" },
+          { nome: "Góis", lat: 40.1572681, lon: -8.1106277, hora: "12:00" },
+          { nome: "Fajão", lat: 40.1495149, lon: -7.9222764, hora: "13:30" },
+          { nome: "Piódão", lat: 40.2292601, lon: -7.8250288, hora: "16:45" }
+        ],
+        horario: [
+          { hora: "10:30", txt: "Saída de Coimbra", det: "" },
+          { hora: "12:00", txt: "Chegada a Góis", det: "Café à beira rio" },
+          { hora: "12:30", txt: "Arranque para Fajão", det: "" },
+          { hora: "13:30", txt: "Almoço em Fajão", det: "O Juiz" },
+          { hora: "15:30", txt: "Descida final para a Serra do Açor", det: "" },
+          { hora: "16:45", txt: "Chegada ao Piódão", det: "Pôr do sol" },
+          { hora: "19:00", txt: "Jantar n'O Fontinha", det: "Reservado · 11 min a pé" }
+        ],
+        vistas: ["Rio Ceira", "Aldeia de Fajão", "Pôr do sol no Piódão"],
+        comer: [
+          { quando: "Almoço", nome: "O Juiz (Fajão)", nota: "Chanfana em forno a lenha", maps: "O Juiz Fajão" },
+          { quando: "Jantar 19:00", nome: "O Fontinha (Piódão)", reservado: true, coords: [40.2297396, -7.8249356],
+            a_pe: "~850 m · 11 min a pé do hotel (regresso a subir; levar lanterna)" }
+        ],
+        dormir: { nome: "INATEL Piódão Hotel", maps: "INATEL Piodao Hotel", reservado: true },
+        combustivel: [
+          { nome: "Galp — Coimbra (saída sul)", coords: [40.2013031, -8.4086694], nota: "24/7 · atestar antes de sair" },
+          { nome: "Alves Bandeira — Góis", coords: [40.1554162, -8.1141220], nota: "Última bomba prática antes da serra" }
+        ],
+        aviso_combustivel: "⛽ Não há bomba no Fajão nem no Piódão. A mais próxima do Piódão fica a ~8 km (Pomares). Sair de Góis com depósito cheio.",
+        dica: "A temperatura desce ao final da tarde no Açor. Forro térmico acessível."
+      },
+      {
+        id: 3, titulo: "O Vale do Alva, Retiro e SPA", dataStr: "2026-09-22", dataFmt: "Ter, 22 Set",
+        km: 175, min: 165, cor: "#27AE60", autoestrada: false,
+        paragens: [
+          { nome: "Piódão", lat: 40.2292601, lon: -7.8250288, hora: "09:45" },
+          { nome: "Vide", lat: 40.295411, lon: -7.784012, hora: "10:30" },
+          { nome: "Ponte das Três Entradas", lat: 40.306915, lon: -7.870779, hora: "10:50" },
+          { nome: "Côja", lat: 40.256689, lon: -7.990173, hora: "11:20" },
+          { nome: "Casal de S. Simão", lat: 39.9163506, lon: -8.3223319, hora: "12:30" },
+          { nome: "Praia da Vieira", lat: 39.8739013, lon: -8.9693060, hora: "16:45" }
+        ],
+        horario: [
+          { hora: "09:45", txt: "Saída do Piódão pela M508", det: "Direção norte · encosta remota da serra" },
+          { hora: "10:30", txt: "Passagem em Vide ➔ Entrada N230", det: "Asfalto de sonho colado ao Rio Alva" },
+          { hora: "10:50", txt: "Ponte das Três Entradas", det: "Confluência dos rios · curvas lendárias" },
+          { hora: "11:20", txt: "Paragem em Côja (Vale do Alva)", det: "Secção verdejante · café à beira-rio" },
+          { hora: "11:45", txt: "Transição rápida via IC6 / IC8", det: "Vias rápidas para despachar transição a sul" },
+          { hora: "12:30", txt: "Chegada a Casal de S. Simão", det: "Passeio nos Passadiços antes do almoço" },
+          { hora: "13:30", txt: "Almoço na Varanda do Casal", det: "Reservado · vista panorâmica" },
+          { hora: "15:30", txt: "Arranque rumo à costa (IC8)", det: "Transição para o litoral" },
+          { hora: "16:45", txt: "Chegada à Praia da Vieira", det: "Direto para o SPA & piscina" },
+          { hora: "20:00", txt: "Jantar no Nau Frágil", det: "Reservado · 1 min a pé" }
+        ],
+        vistas: ["Estrada M508 (Encosta Norte)", "Curvas da N230 no Rio Alva", "Ponte das Três Entradas", "Passadiços de S. Simão", "Pôr do sol na Vieira"],
+        comer: [
+          { quando: "Almoço", nome: "Varanda do Casal (S. Simão)", maps: "Varanda do Casal Casal de São Simão" },
+          { quando: "Jantar 20:00", nome: "Nau Frágil", reservado: true, coords: [39.875889, -8.971315],
+            a_pe: "~100 m · 1 min a pé do hotel (na Marginal)" }
+        ],
+        dormir: { nome: "Hotel Cristal Vieira Praia & SPA", maps: "Hotel Cristal Vieira Praia SPA", reservado: true },
+        combustivel: [
+          { nome: "Alves Bandeira — Côja", coords: [40.2592, -7.9941], nota: "Bomba na saída de Côja rumo ao IC6" },
+          { nome: "Intermarché — Figueiró dos Vinhos", coords: [39.9058098, -8.2807051], nota: "No IC8, ~8 km antes de Casal de S. Simão" },
+          { nome: "Galp — Vieira de Leiria", coords: [39.8691482, -8.9344074], nota: "~3 km do hotel, à chegada" }
+        ],
+        aviso_combustivel: "⛽ Rota do Vale do Alva com bomba conveniente em Côja antes de entrar no IC6.",
+        dica: "A N230 entre Vide e a Ponte das Três Entradas é pura diversão motociclística. Em Côja respira fundo e usa o IC6/IC8 para chegar a horas ao almoço."
+      },
+      {
+        id: 4, titulo: "Mosteiros, Mar e Muralhas", dataStr: "2026-09-23", dataFmt: "Qua, 23 Set",
+        km: 85, min: 95, cor: "#8E44AD", autoestrada: false,
+        paragens: [
+          { nome: "Praia da Vieira", lat: 39.8739013, lon: -8.9693060, hora: "10:00" },
+          { nome: "Alcobaça", lat: 39.5503343, lon: -8.9730531, hora: "10:45" },
+          { nome: "S. Martinho do Porto", lat: 39.5116589, lon: -9.1342753, hora: "13:00" },
+          { nome: "Óbidos", lat: 39.3572399, lon: -9.1578614, hora: "16:00" }
+        ],
+        horario: [
+          { hora: "10:00", txt: "Saída da Praia da Vieira", det: "" },
+          { hora: "10:45", txt: "Chegada a Alcobaça", det: "Túmulos de Pedro e Inês" },
+          { hora: "12:30", txt: "Saída para a costa", det: "" },
+          { hora: "13:00", txt: "Almoço em S. Martinho do Porto", det: "Restaurante Carvalho" },
+          { hora: "15:30", txt: "Saída rumo a Óbidos", det: "" },
+          { hora: "16:00", txt: "Chegada e check-in nas muralhas", det: "" },
+          { hora: "20:00", txt: "Jantar na Tasca Torta", det: "Reservado · 2 min a pé" }
+        ],
+        vistas: ["Mosteiro de Alcobaça", "Baía de S. Martinho", "Ruelas noturnas em Óbidos"],
+        comer: [
+          { quando: "Almoço", nome: "Restaurante Carvalho", nota: "Peixe fresco / marisco", maps: "Restaurante Carvalho São Martinho do Porto" },
+          { quando: "Jantar 20:00", nome: "Tasca Torta", reservado: true, coords: [39.361444, -9.1575206],
+            a_pe: "~150 m · 2 min a pé do hotel (Rua Direita)" }
+        ],
+        dormir: { nome: "Óbidos Pátio House", maps: "Obidos Patio House", reservado: true },
+        combustivel: [
+          { nome: "Galp — Vieira de Leiria", coords: [39.8691482, -8.9344074], nota: "~3 km do hotel, antes de arrancar" }
+        ],
+        aviso_combustivel: "Etapa curta e com bombas frequentes ao longo da costa.",
+        dica: "Etapa muito curta. Condução relaxada."
+      },
+      {
+        id: 5, titulo: "Regresso Rápido (AE)", dataStr: "2026-09-24", dataFmt: "Qui, 24 Set",
+        km: 95, min: 70, cor: "#E74C3C", autoestrada: true,
+        paragens: [
+          { nome: "Óbidos", lat: 39.3572399, lon: -9.1578614, hora: "11:00" },
+          { nome: "Cascais", lat: 38.6960614, lon: -9.4303646, hora: "12:15" }
+        ],
+        horario: [
+          { hora: "11:00", txt: "Saída relaxada de Óbidos", det: "Diretos à A8" },
+          { hora: "12:15", txt: "Chegada a Cascais", det: "" },
+          { hora: "13:00", txt: "Almoço de encerramento", det: "Em casa / na linha" }
+        ],
+        vistas: ["Tirada reta para regresso sem fadiga"],
+        comer: [{ quando: "Almoço", nome: "Chegada a Cascais" }],
+        dormir: null,
+        combustivel: [],
+        aviso_combustivel: "A8 com áreas de serviço. Atestar só se for preciso.",
+        dica: "Tampões para os ouvidos por causa do vento da autoestrada."
+      }
+    ];
+
+    // ==========================================
+    // ESTADO DA APLICAÇÃO
+    // ==========================================
+    let currentDayId = 1;
+    let simulatedTime = null;
+    let currentCoords = null;
+    let leafMap = null;
+    let mapLayers = [];
+    let gpsMarker = null;
+
+    // Inicialização
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      initServiceWorker();
+      initNetworkListeners();
+      initDayPills();
+      initTheme();
+      initTabs();
+      initDiario();
+      initSOS();
+      initSimTime();
+      updateCockpit(currentDayId);
+      renderRoteiro();
+
+      // Inicia monitorização GPS passiva
+      startGpsTracking();
+    });
+
+    // PWA Service Worker
+    function initServiceWorker() {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(err => {
+          console.log('SW offline:', err);
+        });
+      }
+    }
+
+    // Monitorização de Rede (Online/Offline)
+    function initNetworkListeners() {
+      const badge = document.getElementById('netStatusBadge');
+      const text = document.getElementById('netStatusText');
+      function update() {
+        if (navigator.onLine) {
+          badge.className = "flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-green-950 text-green-400 border border-green-800";
+          text.textContent = "ONLINE";
+        } else {
+          badge.className = "flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-red-950 text-red-400 border border-red-800 animate-pulse";
+          text.textContent = "OFFLINE (SERRA)";
+        }
+      }
+      window.addEventListener('online', update);
+      window.addEventListener('offline', update);
+      update();
+    }
+
+    // Alternar Tema (OLED Dark / Sunlight High Contrast)
+    function initTheme() {
+      const btn = document.getElementById('btnThemeToggle');
+      const isSun = localStorage.getItem('roadlog_sunlight') === 'true';
+      if (isSun) document.body.classList.add('sunlight-mode');
+
+      btn.addEventListener('click', () => {
+        haptic();
+        document.body.classList.toggle('sunlight-mode');
+        const nowSun = document.body.classList.contains('sunlight-mode');
+        localStorage.setItem('roadlog_sunlight', nowSun);
+      });
+    }
+
+    // Feedback Háptico (Vibração ao toque para luvas)
+    function haptic() {
+      if ('vibrate' in navigator) {
+        try { navigator.vibrate(15); } catch(e){}
+      }
+    }
+
+    // Navegação pelas 5 Tabs Principais
+    function initTabs() {
+      const tabs = document.querySelectorAll('.nav-tab');
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          haptic();
+          const targetId = tab.getAttribute('data-target');
+
+          // Alternar classes dos botões
+          tabs.forEach(t => {
+            t.classList.remove('text-blue-500');
+            t.classList.add('text-gray-400');
+          });
+          tab.classList.add('text-blue-500');
+          tab.classList.remove('text-gray-400');
+
+          // Ocultar todas as secções e mostrar o target
+          ['tabCockpit', 'tabRoteiro', 'tabMapa', 'tabDiario', 'tabSOS'].forEach(id => {
+            const el = document.getElementById(id);
+            if (id === targetId) {
+              el.classList.remove('hidden');
+              if (id === 'tabMapa') {
+                setTimeout(initOrUpdateMap, 150);
+              }
+            } else {
+              el.classList.add('hidden');
+            }
+          });
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+      });
+    }
+
+    // Pílulas de Seleção de Dia
+    function initDayPills() {
+      const container = document.getElementById('dayPillsContainer');
+      container.innerHTML = '';
+
+      DIAS.forEach(d => {
+        const btn = document.createElement('button');
+        btn.id = `dayPill_${d.id}`;
+        btn.className = `btn-tactile flex-shrink-0 px-3.5 py-2 rounded-xl text-xs font-black transition border ${
+          d.id === currentDayId 
+            ? 'bg-blue-600 text-white border-blue-400 shadow-md' 
+            : 'bg-gray-800 text-gray-300 border-gray-700'
+        }`;
+        btn.innerHTML = `<span>Dia ${d.id}</span> <span class="opacity-75 ml-1 font-semibold">${d.dataFmt.split(',')[0]}</span>`;
+        btn.addEventListener('click', () => {
+          haptic();
+          currentDayId = d.id;
+          updateDayPills();
+          updateCockpit(currentDayId);
+          if (!document.getElementById('tabMapa').classList.contains('hidden')) {
+            updateMapDay(currentDayId);
+          }
+        });
+        container.appendChild(btn);
+      });
+    }
+
+    function updateDayPills() {
+      DIAS.forEach(d => {
+        const btn = document.getElementById(`dayPill_${d.id}`);
+        if (!btn) return;
+        if (d.id === currentDayId) {
+          btn.className = "btn-tactile flex-shrink-0 px-3.5 py-2 rounded-xl text-xs font-black transition border bg-blue-600 text-white border-blue-400 shadow-md";
+        } else {
+          btn.className = "btn-tactile flex-shrink-0 px-3.5 py-2 rounded-xl text-xs font-black transition border bg-gray-800 text-gray-300 border-gray-700";
+        }
+      });
+    }
+
+    // ATUALIZAÇÃO DO COCKPIT (ECRÃ PRINCIPAL)
+    function updateCockpit(dayId) {
+      const d = DIAS.find(x => x.id === dayId) || DIAS[0];
+      const now = getEffectiveTime();
+
+      document.getElementById('cockpitDayBadge').textContent = `DIA ${d.id} · ${d.dataFmt.toUpperCase()}`;
+      document.getElementById('cockpitDayBadge').style.borderColor = d.cor;
+      document.getElementById('heroCard').style.borderTopColor = d.cor;
+      document.getElementById('cockpitRoadType').innerHTML = d.autoestrada ? "🛣️ Autoestrada" : "🌄 Nacionais & Curvas";
+      document.getElementById('cockpitTitle').textContent = d.titulo;
+      document.getElementById('cockpitRoute').textContent = d.paragens.map(p => p.nome).join(' → ');
+
+      document.getElementById('metricKm').textContent = `${d.km} km`;
+      document.getElementById('metricTime').textContent = formatMins(d.min);
+      document.getElementById('metricStops').textContent = d.paragens.length;
+
+      // Links 1-Toque de Navegação
+      const gmapsUrl = buildGoogleMapsRoute(d.paragens);
+      const wazeUrl = buildWazeUrl(d.paragens[d.paragens.length - 1].lat, d.paragens[d.paragens.length - 1].lon);
+      document.getElementById('btnNavGoogle').href = gmapsUrl;
+      document.getElementById('btnNavWaze').href = wazeUrl;
+
+      // Alerta de Combustível
+      const fuelAlert = document.getElementById('fuelAlertBox');
+      if (d.aviso_combustivel) {
+        fuelAlert.classList.remove('hidden');
+        document.getElementById('fuelAlertText').textContent = d.aviso_combustivel;
+      } else {
+        fuelAlert.classList.add('hidden');
+      }
+
+      // Dica do Dia
+      document.getElementById('cockpitTip').textContent = d.dica;
+
+      // Renderizar Horário do Cockpit com destaque "AGORA"
+      renderCockpitTimeline(d, now);
+
+      // Carregar Previsão do Tempo para as Paragens do Dia
+      fetchWeatherForDay(d);
+    }
+
+    function formatMins(m) {
+      const h = Math.floor(m / 60);
+      const min = m % 60;
+      return min > 0 ? `${h}h${min < 10 ? '0' : ''}${min}` : `${h}h`;
+    }
+
+    function buildGoogleMapsRoute(paragens) {
+      const o = paragens[0];
+      const f = paragens[paragens.length - 1];
+      let url = `https://www.google.com/maps/dir/?api=1&origin=${o.lat},${o.lon}&destination=${f.lat},${f.lon}&travelmode=driving`;
+      if (paragens.length > 2) {
+        const waypoints = paragens.slice(1, -1).map(p => `${p.lat},${p.lon}`).join('|');
+        url += `&waypoints=${waypoints}`;
+      }
+      return url;
+    }
+
+    function buildWazeUrl(lat, lon) {
+      return `https://waze.com/ul?ll=${lat},${lon}&navigate=yes`;
+    }
+
+    function renderCockpitTimeline(d, now) {
+      const container = document.getElementById('cockpitTimeline');
+      container.innerHTML = '';
+
+      const isToday = now.toISOString().split('T')[0] === d.dataStr;
+      let currentIndex = -1;
+
+      if (isToday) {
+        const currentHm = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        for (let i = 0; i < d.horario.length; i++) {
+          if (d.horario[i].hora <= currentHm) {
+            currentIndex = i;
+          }
+        }
+      }
+
+      d.horario.forEach((h, idx) => {
+        const isCurrent = isToday && idx === currentIndex;
+        const isPast = isToday && idx < currentIndex;
+        const isNext = isToday && currentIndex === -1 && idx === 0;
+
+        const row = document.createElement('div');
+        row.className = `flex items-start space-x-3 p-2.5 rounded-xl border transition ${
+          isCurrent 
+            ? 'bg-blue-900 bg-opacity-30 border-blue-500 shadow-sm' 
+            : isPast 
+            ? 'opacity-40 border-transparent' 
+            : 'card-surface border-gray-800'
+        }`;
+
+        let badge = '';
+        if (isCurrent) badge = `<span class="ml-2 px-1.5 py-0.5 rounded text-[10px] font-black bg-blue-600 text-white animate-pulse">AGORA</span>`;
+        if (isNext) badge = `<span class="ml-2 px-1.5 py-0.5 rounded text-[10px] font-black bg-green-600 text-white">A SEGUIR</span>`;
+
+        row.innerHTML = `
+          <span class="font-mono font-bold text-sm text-gray-400 min-w-[44px]">${h.hora}</span>
+          <div class="flex-1">
+            <div class="text-xs font-bold text-white flex items-center">${h.txt} ${badge}</div>
+            ${h.det ? `<div class="text-[11px] text-gray-400 mt-0.5">${h.det}</div>` : ''}
+          </div>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    // ==========================================
+    // METEOROLOGIA (OPEN-METEO SEM REQUISITO DE API KEY)
+    // ==========================================
+    async function fetchWeatherForDay(d) {
+      const container = document.getElementById('weatherScrollContainer');
+      container.innerHTML = '<div class="text-xs text-gray-500 p-2">A consultar satélite...</div>';
+
+      try {
+        const tiles = [];
+        for (const p of d.paragens) {
+          // Open-Meteo é grátis, fidedigno e cobre todo o território nacional
+          const url = `https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lon}&hourly=temperature_2m,precipitation_probability,wind_speed_10m&forecast_days=7&timezone=auto`;
+          const res = await fetch(url);
+          if (res.ok) {
+            const data = await res.json();
+            const temp = Math.round(data.hourly.temperature_2m[12] || 22);
+            const pop = data.hourly.precipitation_probability[12] || 0;
+            const wind = Math.round(data.hourly.wind_speed_10m[12] || 15);
+
+            let icon = '☀️';
+            if (pop > 50) icon = '🌧️';
+            else if (pop > 20) icon = '⛅';
+
+            tiles.push(`
+              <div class="flex-shrink-0 w-28 bg-gray-800 bg-opacity-70 rounded-xl p-2.5 text-center border border-gray-700">
+                <span class="text-xs font-extrabold text-white block truncate">${p.nome}</span>
+                <span class="text-[10px] text-gray-400 font-mono">${p.hora}</span>
+                <div class="text-2xl my-1">${icon}</div>
+                <div class="text-base font-black text-white">${temp}°C</div>
+                <div class="text-[10px] text-gray-400 mt-1">💧 ${pop}% · 💨 ${wind}km/h</div>
+              </div>
+            `);
+          }
+        }
+        if (tiles.length > 0) {
+          container.innerHTML = tiles.join('');
+          document.getElementById('weatherSyncTime').textContent = "Atualizado";
+        } else {
+          container.innerHTML = '<div class="text-xs text-gray-500 p-2">Previsão disponível mais perto da data.</div>';
+        }
+      } catch (err) {
+        container.innerHTML = '<div class="text-xs text-gray-500 p-2">Sem rede para meteorologia (a usar estimativa).</div>';
+      }
+    }
+
+    // ==========================================
+    // ECRÃ ROTEIRO COMPLETO (ACORDÕES & DETALHES)
+    // ==========================================
+    function renderRoteiro() {
+      const container = document.getElementById('roteiroDaysList');
+      container.innerHTML = '';
+
+      DIAS.forEach(d => {
+        const card = document.createElement('div');
+        card.className = "card-surface rounded-2xl p-4 shadow-lg border-l-4 space-y-3";
+        card.style.borderLeftColor = d.cor;
+
+        // Paragens
+        const paragensHtml = d.paragens.map(p => `
+          <div class="flex items-center justify-between py-1 border-b border-gray-800 last:border-0 text-xs">
+            <span class="font-bold text-white flex items-center space-x-1.5">
+              <span class="w-2 h-2 rounded-full" style="background:${d.cor}"></span>
+              <span>${p.nome}</span>
+            </span>
+            <div class="flex items-center space-x-2">
+              <span class="font-mono text-gray-400">~${p.hora}</span>
+              <a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}&travelmode=driving" target="_blank" class="px-2 py-1 bg-gray-800 text-blue-400 rounded text-[11px] font-bold">Ir</a>
+            </div>
+          </div>
+        `).join('');
+
+        // Refeições e Alojamento
+        let comerHtml = d.comer.map(c => {
+          const res = c.reservado ? '<span class="px-1.5 py-0.5 bg-green-900 text-green-300 rounded text-[10px] font-bold ml-1">Reservado</span>' : '';
+          const pe = c.a_pe ? `<div class="text-[11px] text-gray-400 mt-0.5">🚶 ${c.a_pe}</div>` : '';
+          return `<div class="text-xs text-gray-300 py-1">🍽️ <b>${c.nome}</b> (${c.quando})${res}${pe}</div>`;
+        }).join('');
+
+        let dormirHtml = d.dormir ? `
+          <div class="text-xs text-gray-300 py-1">
+            🛏️ <b>${d.dormir.nome}</b> 
+            <span class="px-1.5 py-0.5 bg-green-900 text-green-300 rounded text-[10px] font-bold ml-1">Reservado</span>
+          </div>
+        ` : '<div class="text-xs text-gray-400">🏠 Chegada a casa</div>';
+
+        card.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div>
+              <span class="text-[11px] font-black uppercase tracking-wider text-gray-400">DIA ${d.id} · ${d.dataFmt}</span>
+              <h3 class="text-base font-black text-white mt-0.5">${d.titulo}</h3>
+              <p class="text-xs text-gray-400">${d.km} km · ${formatMins(d.min)} · ${d.autoestrada ? 'Autoestrada' : 'Nacionais'}</p>
+            </div>
+            <button onclick="selectDayFromRoteiro(${d.id})" class="btn-tactile px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow">
+              Abrir Cockpit →
+            </button>
+          </div>
+
+          <div class="bg-gray-900 bg-opacity-70 rounded-xl p-3 border border-gray-800">
+            <span class="text-[10px] font-black uppercase text-gray-400 block mb-1">Paragens da Etapa</span>
+            ${paragensHtml}
+          </div>
+
+          <div class="bg-gray-900 bg-opacity-70 rounded-xl p-3 border border-gray-800">
+            <span class="text-[10px] font-black uppercase text-gray-400 block mb-1">Dormir & Comer</span>
+            ${dormirHtml}
+            ${comerHtml}
+          </div>
+
+          <div class="text-xs text-gray-400 flex items-center justify-between pt-1">
+            <span>📸 ${d.vistas.join(' · ')}</span>
+            <button onclick="downloadSingleGpx(${d.id})" class="text-blue-400 font-bold hover:underline">GPX Dia ${d.id}</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function selectDayFromRoteiro(id) {
+      currentDayId = id;
+      updateDayPills();
+      updateCockpit(id);
+      document.querySelector('[data-target="tabCockpit"]').click();
+    }
+
+    // ==========================================
+    // MAPA INTERATIVO (LEAFLET)
+    // ==========================================
+    function initOrUpdateMap() {
+      if (!leafMap) {
+        leafMap = L.map('leafletMap', {
+          zoomControl: false,
+          attributionControl: false
+        }).setView([39.8, -8.5], 8);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 18
+        }).addTo(leafMap);
+
+        // Controlos de zoom ergonómicos
+        L.control.zoom({ position: 'topright' }).addTo(leafMap);
+
+        document.getElementById('btnMapFilterDay').addEventListener('click', () => {
+          updateMapDay(currentDayId);
+        });
+        document.getElementById('btnMapShowAll').addEventListener('click', () => {
+          updateMapDay(null);
+        });
+      }
+
+      updateMapDay(currentDayId);
+      setTimeout(() => leafMap.invalidateSize(), 200);
+    }
+
+    function updateMapDay(dayId) {
+      if (!leafMap) return;
+
+      // Limpar camadas anteriores
+      mapLayers.forEach(l => leafMap.removeLayer(l));
+      mapLayers = [];
+
+      const diasToShow = dayId ? DIAS.filter(d => d.id === dayId) : DIAS;
+      const allCoords = [];
+
+      document.getElementById('mapDayIndicator').textContent = dayId ? `Dia ${dayId}` : "Todos os Dias";
+      document.getElementById('mapFilterDayNum').textContent = currentDayId;
+
+      diasToShow.forEach(d => {
+        const pts = d.paragens.map(p => [p.lat, p.lon]);
+        allCoords.push(...pts);
+
+        // Linha do dia
+        const poly = L.polyline(pts, {
+          color: d.cor,
+          weight: dayId ? 6 : 4,
+          opacity: 0.9,
+          dashArray: d.autoestrada ? '8, 8' : null
+        }).addTo(leafMap);
+        mapLayers.push(poly);
+
+        // Marcadores de Paragem
+        d.paragens.forEach((p, idx) => {
+          const isStart = idx === 0;
+          const isEnd = idx === d.paragens.length - 1;
+
+          const marker = L.circleMarker([p.lat, p.lon], {
+            radius: isStart || isEnd ? 9 : 6,
+            fillColor: d.cor,
+            color: '#FFFFFF',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 1
+          }).addTo(leafMap);
+
+          marker.bindPopup(`
+            <div class="p-1 text-xs">
+              <b class="text-sm font-bold block">${p.nome}</b>
+              <span class="text-gray-400">Dia ${d.id} · ~${p.hora}</span>
+              <div class="mt-2">
+                <a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}&travelmode=driving" target="_blank" class="px-2 py-1 bg-blue-600 text-white rounded font-bold inline-block">Navegar aqui</a>
+              </div>
+            </div>
+          `);
+          mapLayers.push(marker);
+        });
+
+        // Marcadores de Bombas de Gasolina Críticas
+        (d.combustivel || []).forEach(c => {
+          const gasMarker = L.circleMarker(c.coords, {
+            radius: 5,
+            fillColor: '#F59E0B',
+            color: '#000',
+            weight: 1.5,
+            fillOpacity: 1
+          }).addTo(leafMap);
+          gasMarker.bindPopup(`
+            <div class="p-1 text-xs">
+              <b class="text-yellow-400 block">⛽ ${c.nome}</b>
+              <span class="text-gray-300">${c.nota}</span>
+            </div>
+          `);
+          mapLayers.push(gasMarker);
+        });
+      });
+
+      if (allCoords.length > 0) {
+        leafMap.fitBounds(allCoords, { padding: [30, 30] });
+      }
+    }
+
+    // ==========================================
+    // GPS TRACKING & "ONDE ESTOU AGORA"
+    // ==========================================
+    function startGpsTracking() {
+      if ('geolocation' in navigator) {
+        navigator.geolocation.watchPosition(
+          pos => {
+            currentCoords = {
+              lat: pos.coords.latitude,
+              lon: pos.coords.longitude,
+              accuracy: Math.round(pos.coords.accuracy)
+            };
+            updateGpsDisplay();
+          },
+          err => console.log('GPS sem sinal ou permissão pendente'),
+          { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 }
+        );
+      }
+
+      document.getElementById('btnGpsLocate').addEventListener('click', () => {
+        haptic();
+        if (!navigator.geolocation) {
+          alert('GPS não suportado neste dispositivo.');
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(pos => {
+          currentCoords = {
+            lat: pos.coords.latitude,
+            lon: pos.coords.longitude,
+            accuracy: Math.round(pos.coords.accuracy)
+          };
+          updateGpsDisplay();
+          if (leafMap) {
+            leafMap.setView([currentCoords.lat, currentCoords.lon], 14);
+            if (!gpsMarker) {
+              gpsMarker = L.marker([currentCoords.lat, currentCoords.lon]).addTo(leafMap);
+            } else {
+              gpsMarker.setLatLng([currentCoords.lat, currentCoords.lon]);
+            }
+            gpsMarker.bindPopup('<b class="text-xs">Estás aqui 🏍️</b>').openPopup();
+          }
+        }, err => {
+          alert('Ativa a localização no telemóvel para te localizares no mapa.');
+        });
+      });
+    }
+
+    function updateGpsDisplay() {
+      if (!currentCoords) return;
+      const textEl = document.getElementById('liveGpsCoordsText');
+      const accEl = document.getElementById('liveGpsAccuracy');
+      if (textEl) {
+        textEl.textContent = `${currentCoords.lat.toFixed(5)}°, ${currentCoords.lon.toFixed(5)}°`;
+      }
+      if (accEl) {
+        accEl.textContent = `Precisão GPS: ±${currentCoords.accuracy} metros`;
+      }
+    }
+
+    // ==========================================
+    // DIÁRIO DE BORDO (ROAD LOG COM VOZ, FOTOS E STORAGE)
+    // ==========================================
+    function initDiario() {
+      renderDiarioFeed();
+
+      // Chips de categoria rápida
+      document.querySelectorAll('.cat-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          haptic();
+          const cat = chip.getAttribute('data-cat');
+          const txtArea = document.getElementById('txtNoteInput');
+          if (!txtArea.value.includes(cat)) {
+            txtArea.value = `${cat} · ${txtArea.value}`.trim();
+          }
+        });
+      });
+
+      // Ditado por Voz (Speech-to-Text)
+      const btnMic = document.getElementById('btnVoiceDictate');
+      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRec();
+        recognition.lang = 'pt-PT';
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        recognition.onstart = () => {
+          btnMic.classList.add('bg-red-600', 'animate-pulse');
+        };
+        recognition.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          const txtArea = document.getElementById('txtNoteInput');
+          txtArea.value = (txtArea.value + ' ' + transcript).trim();
+        };
+        recognition.onend = () => {
+          btnMic.classList.remove('bg-red-600', 'animate-pulse');
+        };
+        recognition.onerror = () => {
+          btnMic.classList.remove('bg-red-600', 'animate-pulse');
+        };
+
+        btnMic.addEventListener('click', () => {
+          haptic();
+          recognition.start();
+        });
+      } else {
+        btnMic.title = "Ditado de voz não suportado pelo browser";
+      }
+
+      // Input de Fotos com compressão Canvas
+      let pendingPhotos = [];
+      const fileInput = document.getElementById('filePhotoInput');
+      fileInput.addEventListener('change', async (e) => {
+        const files = Array.from(e.target.files);
+        if (!files.length) return;
+
+        document.getElementById('lblPhotoCount').textContent = `A carregar (${files.length})...`;
+        for (const f of files) {
+          const isVid = f.type.startsWith('video/') || f.name.match(/\.(mp4|mov|webm|m4v)$/i);
+          if (isVid) {
+            const base64 = await readFileAsBase64(f);
+            pendingPhotos.push({ name: f.name, data: base64, isVideo: true, mime: f.type || 'video/mp4' });
+          } else {
+            const base64 = await compressImage(f, 1200, 0.8);
+            pendingPhotos.push({ name: f.name, data: base64, isVideo: false, mime: 'image/jpeg' });
+          }
+        }
+        document.getElementById('lblPhotoCount').textContent = `📷/🎥 ${pendingPhotos.length} media`;
+      });
+
+      // Guardar Nota
+      document.getElementById('btnSaveNote').addEventListener('click', async () => {
+        haptic();
+        const text = document.getElementById('txtNoteInput').value.trim();
+        const author = document.getElementById('txtNoteAuthor').value.trim() || 'Piloto';
+        if (!text && !pendingPhotos.length) {
+          alert('Escreve algo ou adiciona uma foto antes de guardar.');
+          return;
+        }
+
+        const newNote = {
+          id: 'note_' + Date.now(),
+          dayId: currentDayId,
+          text: text,
+          author: author,
+          time: new Date().toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
+          date: new Date().toLocaleDateString('pt-PT'),
+          photos: pendingPhotos
+        };
+
+        // Guardar no LocalStorage
+        saveLocalNote(newNote);
+
+        // Resetar form
+        document.getElementById('txtNoteInput').value = '';
+        pendingPhotos = [];
+        document.getElementById('lblPhotoCount').textContent = 'Tirar Foto';
+        renderDiarioFeed();
+
+        // Tentar sincronização em background se houver Supabase configurado
+        syncNoteToSupabase(newNote);
+      });
+
+      // Modal Nuvem
+      document.getElementById('btnOpenCloudModal').addEventListener('click', () => {
+        document.getElementById('modalCloud').classList.remove('hidden');
+      });
+      document.getElementById('btnCloseModal').addEventListener('click', () => {
+        document.getElementById('modalCloud').classList.add('hidden');
+      });
+      document.getElementById('btnSaveCloudConfig').addEventListener('click', () => {
+        haptic();
+        const code = document.getElementById('txtCloudCode').value.trim();
+        const url = document.getElementById('txtCloudUrl').value.trim();
+        const key = document.getElementById('txtCloudKey').value.trim();
+        if (code) localStorage.setItem('roadlog_supa_code', code);
+        if (url) localStorage.setItem('roadlog_supa_url', url);
+        if (key) localStorage.setItem('roadlog_supa_key', key);
+        document.getElementById('cloudStatusText').textContent = code ? "Ligado à Nuvem" : "Modo Local (Offline)";
+        document.getElementById('modalCloud').classList.add('hidden');
+      });
+    }
+
+    function compressImage(file, maxSide = 1200, quality = 0.8) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let w = img.width;
+            let h = img.height;
+            if (w > maxSide || h > maxSide) {
+              if (w > h) {
+                h = Math.round((h * maxSide) / w);
+                w = maxSide;
+              } else {
+                w = Math.round((w * maxSide) / h);
+                h = maxSide;
+              }
+            }
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function readFileAsBase64(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function getLocalNotes() {
+      try {
+        return JSON.parse(localStorage.getItem('roadlog_local_notes') || '[]');
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveLocalNote(note) {
+      const notes = getLocalNotes();
+      notes.unshift(note);
+      localStorage.setItem('roadlog_local_notes', JSON.stringify(notes));
+    }
+
+    function deleteNote(id) {
+      if (!confirm('Queres apagar este registo?')) return;
+      haptic();
+      let notes = getLocalNotes();
+      notes = notes.filter(n => n.id !== id);
+      localStorage.setItem('roadlog_local_notes', JSON.stringify(notes));
+      renderDiarioFeed();
+    }
+
+    function renderDiarioFeed() {
+      const container = document.getElementById('diarioFeedContainer');
+      const notes = getLocalNotes();
+
+      if (!notes.length) {
+        container.innerHTML = `
+          <div class="card-surface rounded-2xl p-6 text-center text-gray-400">
+            <span class="text-3xl block mb-2">📖</span>
+            <b class="text-sm text-gray-300 block">Diário ainda sem registos</b>
+            <p class="text-xs mt-1">Regista abastecimentos, fotos, vídeos e momentos ao longo do caminho.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = notes.map(n => `
+        <div class="card-surface rounded-2xl p-4 shadow border border-gray-800 space-y-2">
+          <div class="flex justify-between items-center text-xs">
+            <div class="flex items-center space-x-1.5 font-bold text-gray-300">
+              <span class="text-blue-400">Dia ${n.dayId}</span>
+              <span>·</span>
+              <span>${n.time}</span>
+              <span class="text-gray-500 font-normal">por ${n.author}</span>
+            </div>
+            <button onclick="deleteNote('${n.id}')" class="text-red-400 hover:text-red-300 text-xs font-semibold">Apagar</button>
+          </div>
+          <p class="text-xs text-white leading-relaxed whitespace-pre-line">${n.text}</p>
+          ${(n.photos && n.photos.length) ? `
+            <div class="grid grid-cols-2 gap-2 pt-2">
+              ${n.photos.map(p => p.isVideo ? `
+                <video src="${p.data}" controls playsinline class="rounded-xl object-cover w-full h-32 border border-gray-800"></video>
+              ` : `
+                <img src="${p.data}" alt="Foto" class="rounded-xl object-cover w-full h-32 border border-gray-800">
+              `).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `).join('');
+    }
+
+    async function syncNoteToSupabase(note) {
+      const code = localStorage.getItem('roadlog_supa_code');
+      const url = localStorage.getItem('roadlog_supa_url');
+      const key = localStorage.getItem('roadlog_supa_key');
+      if (!code || !url || !key) return;
+
+      try {
+        await fetch(`${url}/rest/v1/rpc/roadlog_nota_criar`, {
+          method: 'POST',
+          headers: {
+            'apikey': key,
+            'Authorization': `Bearer ${key}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            p_codigo: code,
+            p_dia: note.dayId,
+            p_texto: note.text,
+            p_autor: note.author
+          })
+        });
+      } catch (err) {
+        console.log('Sync adiado (offline)');
+      }
+    }
+
+    // ==========================================
+    // SOS, COMBUSTÍVEL & EXPORTAÇÕES
+    // ==========================================
+    function initSOS() {
+      // Copiar Coordenadas
+      document.getElementById('btnCopyCoords').addEventListener('click', () => {
+        haptic();
+        const text = document.getElementById('liveGpsCoordsText').textContent;
+        navigator.clipboard.writeText(text).then(() => {
+          alert('Coordenadas copiadas para a área de transferência!');
+        });
+      });
+
+      // Registar Abastecimento
+      document.getElementById('btnLogFuel').addEventListener('click', () => {
+        haptic();
+        const km = document.getElementById('fuelInputKm').value;
+        const lit = document.getElementById('fuelInputLiters').value;
+        const cost = document.getElementById('fuelInputCost').value;
+
+        if (!km && !lit) {
+          alert('Preenche pelo menos os Km ou Litros.');
+          return;
+        }
+
+        const fuelNote = {
+          id: 'fuel_' + Date.now(),
+          dayId: currentDayId,
+          text: `⛽ ABASTECIMENTO: ${lit || '?'}L · ${cost ? cost + '€' : ''} aos ${km ? km + ' km' : 'km n/d'}. Depósito atestado.`,
+          author: 'Piloto',
+          time: new Date().toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
+          date: new Date().toLocaleDateString('pt-PT')
+        };
+        saveLocalNote(fuelNote);
+        renderDiarioFeed();
+
+        document.getElementById('fuelInputKm').value = '';
+        document.getElementById('fuelInputLiters').value = '';
+        document.getElementById('fuelInputCost').value = '';
+        alert('Abastecimento registado com sucesso no Diário!');
+      });
+
+      // Download GPX Completo
+      document.getElementById('btnDownloadAllGpx').addEventListener('click', () => {
+        haptic();
+        const gpxData = generateGpx(DIAS);
+        downloadFile(gpxData, 'viagem_piodao_completa.gpx', 'application/gpx+xml');
+      });
+
+      // Download Guia Offline HTML
+      document.getElementById('btnDownloadOfflineHtml').addEventListener('click', () => {
+        haptic();
+        const htmlData = generateOfflineGuide();
+        downloadFile(htmlData, 'guia_offline_viagem_piodao.html', 'text/html');
+      });
+    }
+
+    function downloadSingleGpx(dayId) {
+      haptic();
+      const d = DIAS.find(x => x.id === dayId);
+      if (!d) return;
+      const gpxData = generateGpx([d]);
+      downloadFile(gpxData, `dia_${d.id}_${d.titulo.toLowerCase().replace(/\s+/g, '_')}.gpx`, 'application/gpx+xml');
+    }
+
+    function generateGpx(diasList) {
+      let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="RoadLogMoto" xmlns="http://www.topografix.com/GPX/1/1">\n`;
+      diasList.forEach(d => {
+        xml += `  <rte>\n    <name>Dia ${d.id} - ${d.titulo}</name>\n`;
+        d.paragens.forEach(p => {
+          xml += `    <rtept lat="${p.lat}" lon="${p.lon}"><name>${p.nome}</name></rtept>\n`;
+        });
+        xml += `  </rte>\n`;
+      });
+      xml += `</gpx>`;
+      return xml;
+    }
+
+    function generateOfflineGuide() {
+      let html = `<!DOCTYPE html><html lang="pt"><head><meta charset="utf-8"><title>Guia de Bolso Offline — Viagem Piódão</title>
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      <style>
+        body{font-family:system-ui,-apple-system,sans-serif;padding:16px;max-width:650px;margin:auto;color:#111;line-height:1.45}
+        h1{font-size:1.4rem;margin-bottom:4px}h2{font-size:1.15rem;margin-top:20px;border-bottom:2px solid #222;padding-bottom:4px}
+        .meta{color:#666;font-size:0.85rem}table{width:100%;border-collapse:collapse;margin:8px 0;font-size:0.88rem}
+        td{padding:5px 4px;border-bottom:1px solid #eee}.alert{background:#fff3cd;padding:8px 10px;border-radius:6px;margin:6px 0;font-weight:bold;font-size:0.85rem}
+      </style></head><body>
+      <h1>🏍️ Guia de Bolso Offline — Viagem Piódão</h1>
+      <div class="meta">Cascais → Fátima → Coimbra → Góis → Piódão → Vieira → Óbidos · 635 km</div>
+      <div class="alert">Emergência Nacional: 112 · SNS 24: 808 24 24 24</div>`;
+
+      DIAS.forEach(d => {
+        html += `<h2>Dia ${d.id} · ${d.dataFmt} — ${d.titulo}</h2>
+        <div class="meta">${d.km} km · ${d.paragens.map(p=>p.nome).join(' → ')}</div>
+        <table>`;
+        d.horario.forEach(h => {
+          html += `<tr><td style="width:50px;font-weight:bold">${h.hora}</td><td>${h.txt} <span class="meta">${h.det}</span></td></tr>`;
+        });
+        html += `</table>`;
+        if (d.aviso_combustivel) html += `<div class="alert">${d.aviso_combustivel}</div>`;
+      });
+      html += `</body></html>`;
+      return html;
+    }
+
+    function downloadFile(content, fileName, contentType) {
+      const a = document.createElement("a");
+      const file = new Blob([content], { type: contentType });
+      a.href = URL.createObjectURL(file);
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    // ==========================================
+    // SIMULADOR DE TEMPO (TESTES DE MODO EM VIAGEM)
+    // ==========================================
+    function initSimTime() {
+      const sel = document.getElementById('selTimeSim');
+      document.getElementById('btnApplySim').addEventListener('click', () => {
+        haptic();
+        if (sel.value === 'real') {
+          simulatedTime = null;
+        } else {
+          simulatedTime = new Date(sel.value);
+        }
+        updateCockpit(currentDayId);
+        alert(`Modo simulado: ${simulatedTime ? simulatedTime.toLocaleString('pt-PT') : 'Tempo Real'}`);
+      });
+    }
+
+    function getEffectiveTime() {
+      return simulatedTime || new Date();
+    }
+  </script>
+</body>
+</html>
