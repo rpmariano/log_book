@@ -1,7 +1,7 @@
 {
-  "name": "Road Log Moto — Viagem Piódão",
-  "short_name": "Road Log",
-  "description": "Diário de bordo, itinerário e navegação para viagem de moto pelo Centro de Portugal e Aldeias do Xisto.",
+  "name": "MotoLog Hub — Road Trips de Moto",
+  "short_name": "MotoLog",
+  "description": "Hub de Road Trips de Moto: Planear, Executar e Recordar. Diário de bordo, cockpit de guiador e rotas offline.",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0B0E14",

@@ -1,5 +1,5 @@
-// Service Worker para Road Log Moto (Offline First)
-const CACHE_NAME = 'roadlog-moto-v1';
+// Service Worker para MotoLog Hub (Offline First)
+const CACHE_NAME = 'motolog-hub-v2';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

@@ -111,30 +111,50 @@
     .leaflet-popup-tip {
       background: #151A23 !important;
     }
+
+    /* Estilos de Impressão / Caderno de Viagem PDF */
+    @media print {
+      body { background: white !important; color: black !important; overflow: visible !important; }
+      header, nav, #mainContainer, #modalHub, #modalNewTrip, #modalEditTrip, #modalCloud, .no-print { display: none !important; }
+      #modalMemoriesReport { position: static !important; display: block !important; background: white !important; color: black !important; padding: 0 !important; width: 100% !important; }
+      .card-surface { background: #fdfdfd !important; border: 1px solid #ddd !important; color: black !important; }
+      .text-white { color: #111 !important; }
+      .text-gray-300, .text-gray-400, .text-gray-500 { color: #444 !important; }
+      .page-break { page-break-after: always; }
+    }
   </style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden select-none">
 
-  <!-- CABEÇALHO SUPERIOR (HUD / BARRA DE ESTADO) -->
-  <header class="safe-top bg-opacity-95 backdrop-filter backdrop-blur-md card-surface border-b z-30 px-4 py-3 flex items-center justify-between shadow-lg">
-    <div class="flex items-center space-x-2.5">
-      <div class="w-10 h-10 rounded-xl bg-blue-600 bg-opacity-20 flex items-center justify-center border border-blue-500 border-opacity-40">
-        <span class="text-xl">🏍️</span>
+  <!-- CABEÇALHO SUPERIOR (HUD / BARRA DE ESTADO COM ACESSO AO HUB) -->
+  <header class="safe-top bg-opacity-95 backdrop-filter backdrop-blur-md card-surface border-b z-30 px-3 py-2.5 flex items-center justify-between shadow-lg">
+    <button id="btnHeaderHubToggle" class="flex items-center space-x-2 text-left p-1 rounded-xl hover:bg-gray-800 transition active:scale-95" title="Abrir Passaporte & Hub de Viagens">
+      <div class="w-10 h-10 rounded-xl bg-blue-600 bg-opacity-25 flex items-center justify-center border border-blue-500 border-opacity-40 relative">
+        <span class="text-xl" id="headerTripIcon">🏍️</span>
+        <span id="headerTripStatusDot" class="w-2.5 h-2.5 rounded-full bg-blue-400 absolute -top-1 -right-1 border-2 border-gray-900" title="Estado da viagem"></span>
       </div>
       <div>
-        <h1 class="text-base font-extrabold tracking-tight leading-none" id="headerTitle">Viagem Piódão</h1>
-        <p class="text-xs text-gray-400 font-medium mt-0.5" id="headerSubtitle">20 a 24 Set · 635 km</p>
+        <div class="flex items-center space-x-1">
+          <h1 class="text-sm font-extrabold tracking-tight leading-none text-white truncate max-w-[135px]" id="headerTitle">Viagem Piódão</h1>
+          <i data-lucide="chevron-down" class="w-4 h-4 text-blue-400"></i>
+        </div>
+        <p class="text-[10px] text-gray-400 font-semibold mt-0.5 truncate max-w-[145px]" id="headerSubtitle">🏁 Concluída · 635 km</p>
       </div>
-    </div>
+    </button>
     
-    <div class="flex items-center space-x-2">
+    <div class="flex items-center space-x-1.5">
+      <!-- Botão Acesso Rápido ao Hub de Viagens -->
+      <button id="btnOpenHub" class="btn-tactile px-2.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black flex items-center space-x-1 shadow-md shadow-blue-900/40" title="Passaporte de Viagens">
+        <i data-lucide="compass" class="w-4 h-4"></i>
+        <span>Hub</span>
+      </button>
       <!-- Alternador Modo Sol / Noite -->
-      <button id="btnThemeToggle" class="p-2.5 rounded-xl card-surface border text-gray-300 active:bg-gray-800 transition" title="Modo Sol / Alto Contraste">
-        <i data-lucide="sun" class="w-5 h-5 text-yellow-400"></i>
+      <button id="btnThemeToggle" class="p-2 rounded-xl card-surface border text-gray-300 active:bg-gray-800 transition" title="Modo Sol / Alto Contraste">
+        <i data-lucide="sun" class="w-4 h-4 text-yellow-400"></i>
       </button>
       <!-- Estado de Ligação / Offline -->
-      <div id="netStatusBadge" class="flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-green-950 text-green-400 border border-green-800">
-        <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+      <div id="netStatusBadge" class="flex items-center space-x-1 px-2 py-1 rounded-lg text-[10px] font-black bg-green-950 text-green-400 border border-green-800">
+        <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
         <span id="netStatusText">ONLINE</span>
       </div>
     </div>
@@ -148,6 +168,23 @@
     <!-- ========================================================= -->
     <section id="tabCockpit" class="space-y-4">
       
+      <!-- BANNER DE ESTADO DA VIAGEM (CONCLUÍDA / EM CURSO / PLANEAMENTO) -->
+      <div id="cockpitTripStatusBanner" class="rounded-2xl p-3.5 card-surface border flex items-center justify-between shadow-lg">
+        <div class="flex items-center space-x-2.5">
+          <span class="text-2xl" id="cockpitStatusIcon">🏁</span>
+          <div>
+            <span class="text-xs font-black uppercase tracking-wider text-blue-400 block" id="cockpitStatusTitle">Viagem Concluída</span>
+            <p class="text-[11px] text-gray-400" id="cockpitStatusDesc">Todas as etapas e memórias gravadas.</p>
+          </div>
+        </div>
+        <div class="flex items-center space-x-1.5" id="cockpitStatusActions">
+          <button id="btnCockpitAction" class="btn-tactile px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black shadow flex items-center space-x-1">
+            <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+            <span>Álbum</span>
+          </button>
+        </div>
+      </div>
+
       <!-- Seletor Rápido de Dias no Topo -->
       <div class="flex space-x-2 overflow-x-auto no-scrollbar py-1" id="dayPillsContainer">
         <!-- Gerado dinamicamente -->
@@ -248,8 +285,16 @@
     <section id="tabRoteiro" class="hidden space-y-4">
       
       <div class="flex items-center justify-between">
-        <h2 class="text-lg font-black tracking-tight">Roteiro da Viagem</h2>
-        <span class="text-xs font-bold text-gray-400">5 Etapas · 20 a 24 Set</span>
+        <div>
+          <h2 class="text-lg font-black tracking-tight text-white" id="roteiroTripTitle">Roteiro da Viagem</h2>
+          <span class="text-xs font-bold text-gray-400" id="roteiroTripSubtitle">5 Etapas · 20 a 24 Set</span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button id="btnAddStage" class="btn-tactile px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black flex items-center space-x-1 shadow">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            <span>Etapa</span>
+          </button>
+        </div>
       </div>
 
       <!-- Lista de Dias em Accordion / Cartões de Alta Legibilidade -->
@@ -295,6 +340,19 @@
     <!-- ========================================================= -->
     <section id="tabDiario" class="hidden space-y-4">
       
+      <!-- Topo do Diário: Álbum de Memórias & Estatísticas da Viagem -->
+      <div class="card-surface rounded-2xl p-3.5 shadow-lg flex items-center justify-between border-l-4 border-purple-500">
+        <div>
+          <span class="text-[10px] font-black uppercase text-purple-400 tracking-wider block truncate max-w-[170px]" id="diarioTripName">Viagem Piódão 2026</span>
+          <h2 class="text-sm font-black text-white mt-0.5">Diário & Memórias</h2>
+          <p class="text-[11px] text-gray-400" id="diarioStatsSummary">0 registos</p>
+        </div>
+        <button id="btnOpenMemories" class="btn-tactile px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-black flex items-center space-x-1.5 shadow-lg shadow-purple-900/30">
+          <i data-lucide="book-open" class="w-4 h-4"></i>
+          <span>Caderno</span>
+        </button>
+      </div>
+
       <!-- Entrada Rápida de Nova Nota -->
       <div class="card-surface rounded-2xl p-4 shadow-xl border-t-4 border-green-500">
         <div class="flex items-center justify-between mb-2.5">
@@ -528,165 +586,636 @@
     </div>
   </div>
 
+  <!-- ========================================================= -->
+  <!-- MODAL: HUB DE ROAD TRIPS (PASSAPORTE DE VIAGENS) -->
+  <!-- ========================================================= -->
+  <div id="modalHub" class="hidden fixed inset-0 bg-black bg-opacity-80 backdrop-filter backdrop-blur-sm z-50 overflow-y-auto p-4 flex justify-center items-start">
+    <div class="card-surface rounded-3xl p-5 w-full max-w-xl border shadow-2xl space-y-4 my-6">
+      
+      <!-- Cabeçalho do Hub -->
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-10 h-10 rounded-2xl bg-blue-600 bg-opacity-20 flex items-center justify-center border border-blue-500 border-opacity-40">
+            <span class="text-xl">🗺️</span>
+          </div>
+          <div>
+            <h2 class="text-base font-black text-white">Passaporte de Road Trips</h2>
+            <p class="text-xs text-gray-400">Planear · Executar · Guardar</p>
+          </div>
+        </div>
+        <button id="btnCloseHub" class="p-2 rounded-xl hover:bg-gray-800 text-gray-400">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Métricas Globais Acumuladas -->
+      <div class="grid grid-cols-4 gap-2 text-center">
+        <div class="bg-gray-900 bg-opacity-80 p-2.5 rounded-2xl border border-gray-800">
+          <span class="text-lg font-black text-blue-400 block" id="hubStatTrips">1</span>
+          <span class="text-[10px] text-gray-400 font-bold uppercase">Viagens</span>
+        </div>
+        <div class="bg-gray-900 bg-opacity-80 p-2.5 rounded-2xl border border-gray-800">
+          <span class="text-lg font-black text-green-400 block" id="hubStatKm">635</span>
+          <span class="text-[10px] text-gray-400 font-bold uppercase">Km Total</span>
+        </div>
+        <div class="bg-gray-900 bg-opacity-80 p-2.5 rounded-2xl border border-gray-800">
+          <span class="text-lg font-black text-yellow-400 block" id="hubStatDays">5</span>
+          <span class="text-[10px] text-gray-400 font-bold uppercase">Dias Estrada</span>
+        </div>
+        <div class="bg-gray-900 bg-opacity-80 p-2.5 rounded-2xl border border-gray-800">
+          <span class="text-lg font-black text-purple-400 block" id="hubStatNotes">0</span>
+          <span class="text-[10px] text-gray-400 font-bold uppercase">Memórias</span>
+        </div>
+      </div>
+
+      <!-- Barra de Ações: Nova Viagem & Backups -->
+      <div class="flex flex-col sm:flex-row gap-2 pt-1">
+        <button id="btnOpenNewTripModal" class="btn-tactile touch-target flex-1 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-2xl text-xs flex items-center justify-center space-x-2 shadow-lg shadow-blue-900/40">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i>
+          <span>Planear Nova Viagem</span>
+        </button>
+        <div class="flex space-x-2">
+          <button id="btnExportBackup" class="btn-tactile px-3 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold rounded-2xl text-xs flex items-center space-x-1.5 border border-gray-700" title="Descarregar backup completo com todas as viagens">
+            <i data-lucide="download" class="w-4 h-4 text-blue-400"></i>
+            <span>Backup</span>
+          </button>
+          <button id="btnImportBackupTrigger" class="btn-tactile px-3 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold rounded-2xl text-xs flex items-center space-x-1.5 border border-gray-700" title="Restaurar ou importar viagens de ficheiro">
+            <i data-lucide="upload" class="w-4 h-4 text-green-400"></i>
+            <span>Importar</span>
+          </button>
+          <input type="file" id="inputImportBackup" accept=".json" class="hidden">
+        </div>
+      </div>
+
+      <!-- Lista de Viagens -->
+      <div class="space-y-3 pt-2">
+        <div class="flex items-center justify-between text-xs px-1">
+          <span class="font-extrabold uppercase text-gray-400 tracking-wider">As Tuas Viagens</span>
+          <span class="text-gray-500" id="hubTripsCountLabel">1 registada</span>
+        </div>
+        <div id="hubTripsList" class="space-y-3">
+          <!-- Renderizado dinamicamente -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL: NOVA ROAD TRIP (FORMULÁRIO DE PLANEAMENTO) -->
+  <!-- ========================================================= -->
+  <div id="modalNewTrip" class="hidden fixed inset-0 bg-black bg-opacity-80 backdrop-filter backdrop-blur-sm z-50 overflow-y-auto p-4 flex justify-center items-center">
+    <div class="card-surface rounded-3xl p-5 w-full max-w-md border shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+        <div class="flex items-center space-x-2">
+          <span class="text-xl">🗺️</span>
+          <h3 class="text-base font-black text-white">Planear Nova Road Trip</h3>
+        </div>
+        <button id="btnCloseNewTrip" class="p-2 rounded-xl hover:bg-gray-800 text-gray-400">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="font-bold text-gray-300 block mb-1">Nome da Road Trip *</label>
+          <input id="inputNewTripTitle" type="text" placeholder="ex: Travessia Estrada Nacional 2" class="w-full p-3 rounded-xl bg-gray-900 border border-gray-700 text-sm text-white focus:outline-none focus:border-blue-500">
+        </div>
+        
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="font-bold text-gray-300 block mb-1">Mota</label>
+            <input id="inputNewTripMota" type="text" placeholder="ex: BMW R 1250 GS" class="w-full p-2.5 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white">
+          </div>
+          <div>
+            <label class="font-bold text-gray-300 block mb-1">Estado</label>
+            <select id="selectNewTripStatus" class="w-full p-2.5 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white">
+              <option value="planeada">📝 Em Planeamento</option>
+              <option value="em_curso">🟢 Na Estrada (Ativa)</option>
+              <option value="concluida">🏁 Já Concluída</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="font-bold text-gray-300 block mb-1">Data Início</label>
+            <input id="inputNewTripStartDate" type="date" class="w-full p-2.5 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white">
+          </div>
+          <div>
+            <label class="font-bold text-gray-300 block mb-1">Data Fim</label>
+            <input id="inputNewTripEndDate" type="date" class="w-full p-2.5 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="font-bold text-gray-300 block mb-1">Origem</label>
+            <input id="inputNewTripOrigin" type="text" placeholder="ex: Chaves" class="w-full p-2.5 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white">
+          </div>
+          <div>
+            <label class="font-bold text-gray-300 block mb-1">Destino</label>
+            <input id="inputNewTripDest" type="text" placeholder="ex: Faro" class="w-full p-2.5 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white">
+          </div>
+        </div>
+
+        <div>
+          <label class="font-bold text-gray-300 block mb-1">Número de Dias / Etapas Iniciais</label>
+          <input id="inputNewTripDaysCount" type="number" min="1" max="15" value="3" class="w-full p-2.5 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white">
+        </div>
+      </div>
+
+      <div class="pt-2 flex space-x-2">
+        <button id="btnCancelNewTrip" class="btn-tactile flex-1 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold rounded-2xl text-xs">
+          Cancelar
+        </button>
+        <button id="btnSaveNewTripSubmit" class="btn-tactile flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-2xl text-xs shadow-lg shadow-blue-900/40">
+          Criar Viagem
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL: EDITAR DETALHES DA VIAGEM -->
+  <!-- ========================================================= -->
+  <div id="modalEditTrip" class="hidden fixed inset-0 bg-black bg-opacity-80 backdrop-filter backdrop-blur-sm z-50 overflow-y-auto p-4 flex justify-center items-center">
+    <div class="card-surface rounded-3xl p-5 w-full max-w-md border shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+        <h3 class="text-base font-black text-white">Editar Viagem</h3>
+        <button id="btnCloseEditTrip" class="p-2 rounded-xl hover:bg-gray-800 text-gray-400">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <input type="hidden" id="editTripId">
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="font-bold text-gray-300 block mb-1">Título da Viagem</label>
+          <input id="inputEditTripTitle" type="text" class="w-full p-3 rounded-xl bg-gray-900 border border-gray-700 text-sm text-white">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="font-bold text-gray-300 block mb-1">Mota</label>
+            <input id="inputEditTripMota" type="text" class="w-full p-2.5 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white">
+          </div>
+          <div>
+            <label class="font-bold text-gray-300 block mb-1">Estado</label>
+            <select id="selectEditTripStatus" class="w-full p-2.5 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white">
+              <option value="planeada">📝 Em Planeamento</option>
+              <option value="em_curso">🟢 Na Estrada (Ativa)</option>
+              <option value="concluida">🏁 Concluída</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="font-bold text-gray-300 block mb-1">Datas / Período</label>
+          <input id="inputEditTripDates" type="text" class="w-full p-2.5 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white">
+        </div>
+
+        <div>
+          <label class="font-bold text-gray-300 block mb-1">Trajeto / Origem ➔ Destino</label>
+          <input id="inputEditTripRoute" type="text" class="w-full p-2.5 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white">
+        </div>
+      </div>
+
+      <div class="pt-2 flex space-x-2">
+        <button id="btnCancelEditTrip" class="btn-tactile flex-1 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 font-bold rounded-2xl text-xs">
+          Cancelar
+        </button>
+        <button id="btnSaveEditTripSubmit" class="btn-tactile flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-2xl text-xs">
+          Guardar Alterações
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL: NOVA ETAPA / DIA NO ROTEIRO -->
+  <!-- ========================================================= -->
+  <div id="modalAddStage" class="hidden fixed inset-0 bg-black bg-opacity-80 backdrop-filter backdrop-blur-sm z-50 overflow-y-auto p-4 flex justify-center items-center">
+    <div class="card-surface rounded-3xl p-5 w-full max-w-md border shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-gray-800 pb-3">
+        <h3 class="text-base font-black text-white">+ Adicionar Nova Etapa</h3>
+        <button id="btnCloseAddStage" class="p-2 rounded-xl hover:bg-gray-800 text-gray-400">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="font-bold text-gray-300 block mb-1">Título da Etapa</label>
+          <input id="inputStageTitle" type="text" placeholder="ex: Pelas Curvas do Gerês" class="w-full p-3 rounded-xl bg-gray-900 border border-gray-700 text-sm text-white">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="font-bold text-gray-300 block mb-1">Data (YYYY-MM-DD)</label>
+            <input id="inputStageDate" type="date" class="w-full p-2.5 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white">
+          </div>
+          <div>
+            <label class="font-bold text-gray-300 block mb-1">Tipo de Estrada</label>
+            <select id="selectStageRoad" class="w-full p-2.5 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white">
+              <option value="false">🌄 Nacionais & Curvas</option>
+              <option value="true">🛣️ Autoestrada</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="font-bold text-gray-300 block mb-1">Distância (Km)</label>
+            <input id="inputStageKm" type="number" placeholder="150" class="w-full p-2.5 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white">
+          </div>
+          <div>
+            <label class="font-bold text-gray-300 block mb-1">Tempo (minutos)</label>
+            <input id="inputStageMin" type="number" placeholder="130" class="w-full p-2.5 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="font-bold text-gray-300 block mb-1">Ponto de Partida</label>
+            <input id="inputStageFrom" type="text" placeholder="ex: Braga" class="w-full p-2.5 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white">
+          </div>
+          <div>
+            <label class="font-bold text-gray-300 block mb-1">Ponto de Chegada</label>
+            <input id="inputStageTo" type="text" placeholder="ex: Gerês" class="w-full p-2.5 rounded-xl bg-gray-900 border border-gray-700 text-xs text-white">
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-2 flex space-x-2">
+        <button id="btnCancelAddStage" class="btn-tactile flex-1 py-3 bg-gray-800 text-gray-300 font-bold rounded-2xl text-xs">
+          Cancelar
+        </button>
+        <button id="btnSaveStageSubmit" class="btn-tactile flex-1 py-3 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-2xl text-xs">
+          Adicionar ao Roteiro
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- MODAL: ÁLBUM DE MEMÓRIAS & CADERNO DE VIAGEM (EXPORTÁVEL) -->
+  <!-- ========================================================= -->
+  <div id="modalMemoriesReport" class="hidden fixed inset-0 bg-[#0B0E14] z-50 overflow-y-auto p-4 md:p-8 flex justify-center items-start">
+    <div class="w-full max-w-2xl space-y-6 pb-20">
+      
+      <!-- Barra Superior de Ações (Oculta na Impressão) -->
+      <div class="no-print flex items-center justify-between bg-gray-900 bg-opacity-90 backdrop-filter backdrop-blur-md p-3 rounded-2xl border border-gray-800 sticky top-2 z-20 shadow-xl">
+        <button id="btnCloseMemories" class="btn-tactile px-3 py-1.5 rounded-xl bg-gray-800 text-gray-300 hover:bg-gray-700 text-xs font-bold flex items-center space-x-1.5">
+          <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          <span>Voltar à App</span>
+        </button>
+        <div class="flex items-center space-x-2">
+          <button id="btnPrintMemories" class="btn-tactile px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold flex items-center space-x-1.5 shadow">
+            <i data-lucide="printer" class="w-4 h-4"></i>
+            <span>Imprimir / PDF</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Conteúdo do Caderno de Viagem -->
+      <div id="memoriesReportContent" class="space-y-6">
+        <!-- Gerado dinamicamente -->
+      </div>
+
+    </div>
+  </div>
+
   <!-- SCRIPT PRINCIPAL DA APLICAÇÃO -->
   <script>
     // ==========================================
-    // DADOS DA VIAGEM (100% EMBUTIDOS & OFFLINE)
+    // DADOS INICIAIS DA VIAGEM MODELO (PIÓDÃO)
     // ==========================================
-    const DIAS = [
-      {
-        id: 1, titulo: "Benção e Romance", dataStr: "2026-09-20", dataFmt: "Dom, 20 Set",
-        km: 225, min: 150, cor: "#2F80ED", autoestrada: true,
-        paragens: [
-          { nome: "Cascais", lat: 38.6960614, lon: -9.4303646, hora: "09:00" },
-          { nome: "Fátima", lat: 39.6324, lon: -8.6713, hora: "10:30" },
-          { nome: "Coimbra", lat: 40.2033145, lon: -8.4102573, hora: "15:30" }
-        ],
-        horario: [
-          { hora: "09:00", txt: "Saída de Cascais", det: "Via A1/A8" },
-          { hora: "10:30", txt: "Chegada a Fátima", det: "Estacionamento" },
-          { hora: "11:00", txt: "Missa e Benção dos Capacetes", det: "" },
-          { hora: "13:00", txt: "Almoço em Fátima", det: "" },
-          { hora: "14:30", txt: "Saída rumo a Coimbra", det: "" },
-          { hora: "15:30", txt: "Chegada e check-in", det: "Passeio na Quinta das Lágrimas" },
-          { hora: "20:00", txt: "Jantar no Quebra o Galho", det: "Reservado · 12 min a pé" }
-        ],
-        vistas: ["Santuário de Fátima", "Quinta das Lágrimas", "Alta de Coimbra"],
-        comer: [
-          { quando: "Almoço", nome: "Em Fátima", maps: "Restaurantes Fátima" },
-          { quando: "Jantar 20:00", nome: "Quebra o Galho", url: "https://www.quebraogalho.com/", reservado: true,
-            coords: [40.2087486, -8.4282289], a_pe: "~900 m · 12 min a pé do hotel (atravessa a ponte; sobe na Alta)" }
-        ],
-        dormir: { nome: "Five Senses in Coimbra", maps: "Five Senses in Coimbra", reservado: true },
-        combustivel: [],
-        aviso_combustivel: "Dia de autoestrada: áreas de serviço da A8/A1 ao longo de todo o percurso.",
-        dica: "Tiradas rápidas em autoestrada. Tampões de ouvidos e casaco ventilado."
-      },
-      {
-        id: 2, titulo: "O Refúgio no Xisto", dataStr: "2026-09-21", dataFmt: "Seg, 21 Set",
-        km: 95, min: 140, cor: "#E67E22", autoestrada: false,
-        paragens: [
-          { nome: "Coimbra", lat: 40.2033145, lon: -8.4102573, hora: "10:30" },
-          { nome: "Góis", lat: 40.1572681, lon: -8.1106277, hora: "12:00" },
-          { nome: "Fajão", lat: 40.1495149, lon: -7.9222764, hora: "13:30" },
-          { nome: "Piódão", lat: 40.2292601, lon: -7.8250288, hora: "16:45" }
-        ],
-        horario: [
-          { hora: "10:30", txt: "Saída de Coimbra", det: "" },
-          { hora: "12:00", txt: "Chegada a Góis", det: "Café à beira rio" },
-          { hora: "12:30", txt: "Arranque para Fajão", det: "" },
-          { hora: "13:30", txt: "Almoço em Fajão", det: "O Juiz" },
-          { hora: "15:30", txt: "Descida final para a Serra do Açor", det: "" },
-          { hora: "16:45", txt: "Chegada ao Piódão", det: "Pôr do sol" },
-          { hora: "19:00", txt: "Jantar n'O Fontinha", det: "Reservado · 11 min a pé" }
-        ],
-        vistas: ["Rio Ceira", "Aldeia de Fajão", "Pôr do sol no Piódão"],
-        comer: [
-          { quando: "Almoço", nome: "O Juiz (Fajão)", nota: "Chanfana em forno a lenha", maps: "O Juiz Fajão" },
-          { quando: "Jantar 19:00", nome: "O Fontinha (Piódão)", reservado: true, coords: [40.2297396, -7.8249356],
-            a_pe: "~850 m · 11 min a pé do hotel (regresso a subir; levar lanterna)" }
-        ],
-        dormir: { nome: "INATEL Piódão Hotel", maps: "INATEL Piodao Hotel", reservado: true },
-        combustivel: [
-          { nome: "Galp — Coimbra (saída sul)", coords: [40.2013031, -8.4086694], nota: "24/7 · atestar antes de sair" },
-          { nome: "Alves Bandeira — Góis", coords: [40.1554162, -8.1141220], nota: "Última bomba prática antes da serra" }
-        ],
-        aviso_combustivel: "⛽ Não há bomba no Fajão nem no Piódão. A mais próxima do Piódão fica a ~8 km (Pomares). Sair de Góis com depósito cheio.",
-        dica: "A temperatura desce ao final da tarde no Açor. Forro térmico acessível."
-      },
-      {
-        id: 3, titulo: "O Vale do Alva, Retiro e SPA", dataStr: "2026-09-22", dataFmt: "Ter, 22 Set",
-        km: 175, min: 165, cor: "#27AE60", autoestrada: false,
-        paragens: [
-          { nome: "Piódão", lat: 40.2292601, lon: -7.8250288, hora: "09:45" },
-          { nome: "Vide", lat: 40.295411, lon: -7.784012, hora: "10:30" },
-          { nome: "Ponte das Três Entradas", lat: 40.306915, lon: -7.870779, hora: "10:50" },
-          { nome: "Côja", lat: 40.256689, lon: -7.990173, hora: "11:20" },
-          { nome: "Casal de S. Simão", lat: 39.9163506, lon: -8.3223319, hora: "12:30" },
-          { nome: "Praia da Vieira", lat: 39.8739013, lon: -8.9693060, hora: "16:45" }
-        ],
-        horario: [
-          { hora: "09:45", txt: "Saída do Piódão pela M508", det: "Direção norte · encosta remota da serra" },
-          { hora: "10:30", txt: "Passagem em Vide ➔ Entrada N230", det: "Asfalto de sonho colado ao Rio Alva" },
-          { hora: "10:50", txt: "Ponte das Três Entradas", det: "Confluência dos rios · curvas lendárias" },
-          { hora: "11:20", txt: "Paragem em Côja (Vale do Alva)", det: "Secção verdejante · café à beira-rio" },
-          { hora: "11:45", txt: "Transição rápida via IC6 / IC8", det: "Vias rápidas para despachar transição a sul" },
-          { hora: "12:30", txt: "Chegada a Casal de S. Simão", det: "Passeio nos Passadiços antes do almoço" },
-          { hora: "13:30", txt: "Almoço na Varanda do Casal", det: "Reservado · vista panorâmica" },
-          { hora: "15:30", txt: "Arranque rumo à costa (IC8)", det: "Transição para o litoral" },
-          { hora: "16:45", txt: "Chegada à Praia da Vieira", det: "Direto para o SPA & piscina" },
-          { hora: "20:00", txt: "Jantar no Nau Frágil", det: "Reservado · 1 min a pé" }
-        ],
-        vistas: ["Estrada M508 (Encosta Norte)", "Curvas da N230 no Rio Alva", "Ponte das Três Entradas", "Passadiços de S. Simão", "Pôr do sol na Vieira"],
-        comer: [
-          { quando: "Almoço", nome: "Varanda do Casal (S. Simão)", maps: "Varanda do Casal Casal de São Simão" },
-          { quando: "Jantar 20:00", nome: "Nau Frágil", reservado: true, coords: [39.875889, -8.971315],
-            a_pe: "~100 m · 1 min a pé do hotel (na Marginal)" }
-        ],
-        dormir: { nome: "Hotel Cristal Vieira Praia & SPA", maps: "Hotel Cristal Vieira Praia SPA", reservado: true },
-        combustivel: [
-          { nome: "Alves Bandeira — Côja", coords: [40.2592, -7.9941], nota: "Bomba na saída de Côja rumo ao IC6" },
-          { nome: "Intermarché — Figueiró dos Vinhos", coords: [39.9058098, -8.2807051], nota: "No IC8, ~8 km antes de Casal de S. Simão" },
-          { nome: "Galp — Vieira de Leiria", coords: [39.8691482, -8.9344074], nota: "~3 km do hotel, à chegada" }
-        ],
-        aviso_combustivel: "⛽ Rota do Vale do Alva com bomba conveniente em Côja antes de entrar no IC6.",
-        dica: "A N230 entre Vide e a Ponte das Três Entradas é pura diversão motociclística. Em Côja respira fundo e usa o IC6/IC8 para chegar a horas ao almoço."
-      },
-      {
-        id: 4, titulo: "Mosteiros, Mar e Muralhas", dataStr: "2026-09-23", dataFmt: "Qua, 23 Set",
-        km: 85, min: 95, cor: "#8E44AD", autoestrada: false,
-        paragens: [
-          { nome: "Praia da Vieira", lat: 39.8739013, lon: -8.9693060, hora: "10:00" },
-          { nome: "Alcobaça", lat: 39.5503343, lon: -8.9730531, hora: "10:45" },
-          { nome: "S. Martinho do Porto", lat: 39.5116589, lon: -9.1342753, hora: "13:00" },
-          { nome: "Óbidos", lat: 39.3572399, lon: -9.1578614, hora: "16:00" }
-        ],
-        horario: [
-          { hora: "10:00", txt: "Saída da Praia da Vieira", det: "" },
-          { hora: "10:45", txt: "Chegada a Alcobaça", det: "Túmulos de Pedro e Inês" },
-          { hora: "12:30", txt: "Saída para a costa", det: "" },
-          { hora: "13:00", txt: "Almoço em S. Martinho do Porto", det: "Restaurante Carvalho" },
-          { hora: "15:30", txt: "Saída rumo a Óbidos", det: "" },
-          { hora: "16:00", txt: "Chegada e check-in nas muralhas", det: "" },
-          { hora: "20:00", txt: "Jantar na Tasca Torta", det: "Reservado · 2 min a pé" }
-        ],
-        vistas: ["Mosteiro de Alcobaça", "Baía de S. Martinho", "Ruelas noturnas em Óbidos"],
-        comer: [
-          { quando: "Almoço", nome: "Restaurante Carvalho", nota: "Peixe fresco / marisco", maps: "Restaurante Carvalho São Martinho do Porto" },
-          { quando: "Jantar 20:00", nome: "Tasca Torta", reservado: true, coords: [39.361444, -9.1575206],
-            a_pe: "~150 m · 2 min a pé do hotel (Rua Direita)" }
-        ],
-        dormir: { nome: "Óbidos Pátio House", maps: "Obidos Patio House", reservado: true },
-        combustivel: [
-          { nome: "Galp — Vieira de Leiria", coords: [39.8691482, -8.9344074], nota: "~3 km do hotel, antes de arrancar" }
-        ],
-        aviso_combustivel: "Etapa curta e com bombas frequentes ao longo da costa.",
-        dica: "Etapa muito curta. Condução relaxada."
-      },
-      {
-        id: 5, titulo: "Regresso Rápido (AE)", dataStr: "2026-09-24", dataFmt: "Qui, 24 Set",
-        km: 95, min: 70, cor: "#E74C3C", autoestrada: true,
-        paragens: [
-          { nome: "Óbidos", lat: 39.3572399, lon: -9.1578614, hora: "11:00" },
-          { nome: "Cascais", lat: 38.6960614, lon: -9.4303646, hora: "12:15" }
-        ],
-        horario: [
-          { hora: "11:00", txt: "Saída relaxada de Óbidos", det: "Diretos à A8" },
-          { hora: "12:15", txt: "Chegada a Cascais", det: "" },
-          { hora: "13:00", txt: "Almoço de encerramento", det: "Em casa / na linha" }
-        ],
-        vistas: ["Tirada reta para regresso sem fadiga"],
-        comer: [{ quando: "Almoço", nome: "Chegada a Cascais" }],
-        dormir: null,
-        combustivel: [],
-        aviso_combustivel: "A8 com áreas de serviço. Atestar só se for preciso.",
-        dica: "Tampões para os ouvidos por causa do vento da autoestrada."
-      }
-    ];
+    const VIAGEM_PIODAO_TEMPLATE = {
+      id: "viagem_piodao_2026",
+      titulo: "Viagem Piódão 2026",
+      subtitulo: "20 a 24 Set · 635 km",
+      status: "concluida", // 'concluida' | 'em_curso' | 'planeada'
+      datas: "20 a 24 Setembro 2026",
+      mota: "Mota Principal",
+      origem: "Cascais",
+      destino: "Cascais",
+      origemDestino: "Cascais ➔ Piódão ➔ Cascais",
+      kmTotal: 635,
+      minTotal: 620,
+      dias: [
+        {
+          id: 1, titulo: "Benção e Romance", dataStr: "2026-09-20", dataFmt: "Dom, 20 Set",
+          km: 225, min: 150, cor: "#2F80ED", autoestrada: true,
+          paragens: [
+            { nome: "Cascais", lat: 38.6960614, lon: -9.4303646, hora: "09:00" },
+            { nome: "Fátima", lat: 39.6324, lon: -8.6713, hora: "10:30" },
+            { nome: "Coimbra", lat: 40.2033145, lon: -8.4102573, hora: "15:30" }
+          ],
+          horario: [
+            { hora: "09:00", txt: "Saída de Cascais", det: "Via A1/A8" },
+            { hora: "10:30", txt: "Chegada a Fátima", det: "Estacionamento" },
+            { hora: "11:00", txt: "Missa e Benção dos Capacetes", det: "" },
+            { hora: "13:00", txt: "Almoço em Fátima", det: "" },
+            { hora: "14:30", txt: "Saída rumo a Coimbra", det: "" },
+            { hora: "15:30", txt: "Chegada e check-in", det: "Passeio na Quinta das Lágrimas" },
+            { hora: "20:00", txt: "Jantar no Quebra o Galho", det: "Reservado · 12 min a pé" }
+          ],
+          vistas: ["Santuário de Fátima", "Quinta das Lágrimas", "Alta de Coimbra"],
+          comer: [
+            { quando: "Almoço", nome: "Em Fátima", maps: "Restaurantes Fátima" },
+            { quando: "Jantar 20:00", nome: "Quebra o Galho", url: "https://www.quebraogalho.com/", reservado: true,
+              coords: [40.2087486, -8.4282289], a_pe: "~900 m · 12 min a pé do hotel (atravessa a ponte; sobe na Alta)" }
+          ],
+          dormir: { nome: "Five Senses in Coimbra", maps: "Five Senses in Coimbra", reservado: true },
+          combustivel: [],
+          aviso_combustivel: "Dia de autoestrada: áreas de serviço da A8/A1 ao longo de todo o percurso.",
+          dica: "Tiradas rápidas em autoestrada. Tampões de ouvidos e casaco ventilado."
+        },
+        {
+          id: 2, titulo: "O Refúgio no Xisto", dataStr: "2026-09-21", dataFmt: "Seg, 21 Set",
+          km: 95, min: 140, cor: "#E67E22", autoestrada: false,
+          paragens: [
+            { nome: "Coimbra", lat: 40.2033145, lon: -8.4102573, hora: "10:30" },
+            { nome: "Góis", lat: 40.1572681, lon: -8.1106277, hora: "12:00" },
+            { nome: "Fajão", lat: 40.1495149, lon: -7.9222764, hora: "13:30" },
+            { nome: "Piódão", lat: 40.2292601, lon: -7.8250288, hora: "16:45" }
+          ],
+          horario: [
+            { hora: "10:30", txt: "Saída de Coimbra", det: "" },
+            { hora: "12:00", txt: "Chegada a Góis", det: "Café à beira rio" },
+            { hora: "12:30", txt: "Arranque para Fajão", det: "" },
+            { hora: "13:30", txt: "Almoço em Fajão", det: "O Juiz" },
+            { hora: "15:30", txt: "Descida final para a Serra do Açor", det: "" },
+            { hora: "16:45", txt: "Chegada ao Piódão", det: "Pôr do sol" },
+            { hora: "19:00", txt: "Jantar n'O Fontinha", det: "Reservado · 11 min a pé" }
+          ],
+          vistas: ["Rio Ceira", "Aldeia de Fajão", "Pôr do sol no Piódão"],
+          comer: [
+            { quando: "Almoço", nome: "O Juiz (Fajão)", nota: "Chanfana em forno a lenha", maps: "O Juiz Fajão" },
+            { quando: "Jantar 19:00", nome: "O Fontinha (Piódão)", reservado: true, coords: [40.2297396, -7.8249356],
+              a_pe: "~850 m · 11 min a pé do hotel (regresso a subir; levar lanterna)" }
+          ],
+          dormir: { nome: "INATEL Piódão Hotel", maps: "INATEL Piodao Hotel", reservado: true },
+          combustivel: [
+            { nome: "Galp — Coimbra (saída sul)", coords: [40.2013031, -8.4086694], nota: "24/7 · atestar antes de sair" },
+            { nome: "Alves Bandeira — Góis", coords: [40.1554162, -8.1141220], nota: "Última bomba prática antes da serra" }
+          ],
+          aviso_combustivel: "⛽ Não há bomba no Fajão nem no Piódão. A mais próxima do Piódão fica a ~8 km (Pomares). Sair de Góis com depósito cheio.",
+          dica: "A temperatura desce ao final da tarde no Açor. Forro térmico acessível."
+        },
+        {
+          id: 3, titulo: "O Vale do Alva, Retiro e SPA", dataStr: "2026-09-22", dataFmt: "Ter, 22 Set",
+          km: 175, min: 165, cor: "#27AE60", autoestrada: false,
+          paragens: [
+            { nome: "Piódão", lat: 40.2292601, lon: -7.8250288, hora: "09:45" },
+            { nome: "Vide", lat: 40.295411, lon: -7.784012, hora: "10:30" },
+            { nome: "Ponte das Três Entradas", lat: 40.306915, lon: -7.870779, hora: "10:50" },
+            { nome: "Côja", lat: 40.256689, lon: -7.990173, hora: "11:20" },
+            { nome: "Casal de S. Simão", lat: 39.9163506, lon: -8.3223319, hora: "12:30" },
+            { nome: "Praia da Vieira", lat: 39.8739013, lon: -8.9693060, hora: "16:45" }
+          ],
+          horario: [
+            { hora: "09:45", txt: "Saída do Piódão pela M508", det: "Direção norte · encosta remota da serra" },
+            { hora: "10:30", txt: "Passagem em Vide ➔ Entrada N230", det: "Asfalto de sonho colado ao Rio Alva" },
+            { hora: "10:50", txt: "Ponte das Três Entradas", det: "Confluência dos rios · curvas lendárias" },
+            { hora: "11:20", txt: "Paragem em Côja (Vale do Alva)", det: "Secção verdejante · café à beira-rio" },
+            { hora: "11:45", txt: "Transição rápida via IC6 / IC8", det: "Vias rápidas para despachar transição a sul" },
+            { hora: "12:30", txt: "Chegada a Casal de S. Simão", det: "Passeio nos Passadiços antes do almoço" },
+            { hora: "13:30", txt: "Almoço na Varanda do Casal", det: "Reservado · vista panorâmica" },
+            { hora: "15:30", txt: "Arranque rumo à costa (IC8)", det: "Transição para o litoral" },
+            { hora: "16:45", txt: "Chegada à Praia da Vieira", det: "Direto para o SPA & piscina" },
+            { hora: "20:00", txt: "Jantar no Nau Frágil", det: "Reservado · 1 min a pé" }
+          ],
+          vistas: ["Estrada M508 (Encosta Norte)", "Curvas da N230 no Rio Alva", "Ponte das Três Entradas", "Passadiços de S. Simão", "Pôr do sol na Vieira"],
+          comer: [
+            { quando: "Almoço", nome: "Varanda do Casal (S. Simão)", maps: "Varanda do Casal Casal de São Simão" },
+            { quando: "Jantar 20:00", nome: "Nau Frágil", reservado: true, coords: [39.875889, -8.971315],
+              a_pe: "~100 m · 1 min a pé do hotel (na Marginal)" }
+          ],
+          dormir: { nome: "Hotel Cristal Vieira Praia & SPA", maps: "Hotel Cristal Vieira Praia SPA", reservado: true },
+          combustivel: [
+            { nome: "Alves Bandeira — Côja", coords: [40.2592, -7.9941], nota: "Bomba na saída de Côja rumo ao IC6" },
+            { nome: "Intermarché — Figueiró dos Vinhos", coords: [39.9058098, -8.2807051], nota: "No IC8, ~8 km antes de Casal de S. Simão" },
+            { nome: "Galp — Vieira de Leiria", coords: [39.8691482, -8.9344074], nota: "~3 km do hotel, à chegada" }
+          ],
+          aviso_combustivel: "⛽ Rota do Vale do Alva com bomba conveniente em Côja antes de entrar no IC6.",
+          dica: "A N230 entre Vide e a Ponte das Três Entradas é pura diversão motociclística. Em Côja respira fundo e usa o IC6/IC8 para chegar a horas ao almoço."
+        },
+        {
+          id: 4, titulo: "Mosteiros, Mar e Muralhas", dataStr: "2026-09-23", dataFmt: "Qua, 23 Set",
+          km: 85, min: 95, cor: "#8E44AD", autoestrada: false,
+          paragens: [
+            { nome: "Praia da Vieira", lat: 39.8739013, lon: -8.9693060, hora: "10:00" },
+            { nome: "Alcobaça", lat: 39.5503343, lon: -8.9730531, hora: "10:45" },
+            { nome: "S. Martinho do Porto", lat: 39.5116589, lon: -9.1342753, hora: "13:00" },
+            { nome: "Óbidos", lat: 39.3572399, lon: -9.1578614, hora: "16:00" }
+          ],
+          horario: [
+            { hora: "10:00", txt: "Saída da Praia da Vieira", det: "" },
+            { hora: "10:45", txt: "Chegada a Alcobaça", det: "Túmulos de Pedro e Inês" },
+            { hora: "12:30", txt: "Saída para a costa", det: "" },
+            { hora: "13:00", txt: "Almoço em S. Martinho do Porto", det: "Restaurante Carvalho" },
+            { hora: "15:30", txt: "Saída rumo a Óbidos", det: "" },
+            { hora: "16:00", txt: "Chegada e check-in nas muralhas", det: "" },
+            { hora: "20:00", txt: "Jantar na Tasca Torta", det: "Reservado · 2 min a pé" }
+          ],
+          vistas: ["Mosteiro de Alcobaça", "Baía de S. Martinho", "Ruelas noturnas em Óbidos"],
+          comer: [
+            { quando: "Almoço", nome: "Restaurante Carvalho", nota: "Peixe fresco / marisco", maps: "Restaurante Carvalho São Martinho do Porto" },
+            { quando: "Jantar 20:00", nome: "Tasca Torta", reservado: true, coords: [39.361444, -9.1575206],
+              a_pe: "~150 m · 2 min a pé do hotel (Rua Direita)" }
+          ],
+          dormir: { nome: "Óbidos Pátio House", maps: "Obidos Patio House", reservado: true },
+          combustivel: [
+            { nome: "Galp — Vieira de Leiria", coords: [39.8691482, -8.9344074], nota: "~3 km do hotel, antes de arrancar" }
+          ],
+          aviso_combustivel: "Etapa curta e com bombas frequentes ao longo da costa.",
+          dica: "Etapa muito curta. Condução relaxada."
+        },
+        {
+          id: 5, titulo: "Regresso Rápido (AE)", dataStr: "2026-09-24", dataFmt: "Qui, 24 Set",
+          km: 95, min: 70, cor: "#E74C3C", autoestrada: true,
+          paragens: [
+            { nome: "Óbidos", lat: 39.3572399, lon: -9.1578614, hora: "11:00" },
+            { nome: "Cascais", lat: 38.6960614, lon: -9.4303646, hora: "12:15" }
+          ],
+          horario: [
+            { hora: "11:00", txt: "Saída relaxada de Óbidos", det: "Diretos à A8" },
+            { hora: "12:15", txt: "Chegada a Cascais", det: "" },
+            { hora: "13:00", txt: "Almoço de encerramento", det: "Em casa / na linha" }
+          ],
+          vistas: ["Tirada reta para regresso sem fadiga"],
+          comer: [{ quando: "Almoço", nome: "Chegada a Cascais" }],
+          dormir: null,
+          combustivel: [],
+          aviso_combustivel: "A8 com áreas de serviço. Atestar só se for preciso.",
+          dica: "Tampões para os ouvidos por causa do vento da autoestrada."
+        }
+      ]
+    };
 
     // ==========================================
-    // ESTADO DA APLICAÇÃO
+    // MOTOR DE DADOS & ARMAZENAMENTO INDEXEDDB
     // ==========================================
+    const DB_NAME = 'motolog_hub_db';
+    const DB_VERSION = 1;
+
+    const MotoDB = {
+      db: null,
+
+      async init() {
+        return new Promise((resolve) => {
+          if (!window.indexedDB) {
+            console.warn('IndexedDB indisponível, a usar localStorage');
+            resolve(false);
+            return;
+          }
+          const req = indexedDB.open(DB_NAME, DB_VERSION);
+          req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('trips')) {
+              db.createObjectStore('trips', { keyPath: 'id' });
+            }
+            if (!db.objectStoreNames.contains('notes')) {
+              const notesStore = db.createObjectStore('notes', { keyPath: 'id' });
+              notesStore.createIndex('tripId', 'tripId', { unique: false });
+            }
+          };
+          req.onsuccess = (e) => {
+            this.db = e.target.result;
+            resolve(true);
+          };
+          req.onerror = () => resolve(false);
+        });
+      },
+
+      async getAllTrips() {
+        if (this.db) {
+          return new Promise((resolve) => {
+            const tx = this.db.transaction('trips', 'readonly');
+            const store = tx.objectStore('trips');
+            const req = store.getAll();
+            req.onsuccess = () => resolve(req.result || []);
+            req.onerror = () => resolve([]);
+          });
+        }
+        try {
+          return JSON.parse(localStorage.getItem('motolog_trips') || '[]');
+        } catch(e) { return []; }
+      },
+
+      async saveTrip(trip) {
+        if (this.db) {
+          return new Promise((resolve) => {
+            const tx = this.db.transaction('trips', 'readwrite');
+            tx.objectStore('trips').put(trip);
+            tx.oncomplete = () => resolve(true);
+            tx.onerror = () => resolve(false);
+          });
+        }
+        const all = await this.getAllTrips();
+        const idx = all.findIndex(t => t.id === trip.id);
+        if (idx >= 0) all[idx] = trip; else all.push(trip);
+        localStorage.setItem('motolog_trips', JSON.stringify(all));
+        return true;
+      },
+
+      async deleteTrip(tripId) {
+        if (this.db) {
+          return new Promise((resolve) => {
+            const tx = this.db.transaction(['trips', 'notes'], 'readwrite');
+            tx.objectStore('trips').delete(tripId);
+            const notesStore = tx.objectStore('notes');
+            const idx = notesStore.index('tripId');
+            const req = idx.openCursor(IDBKeyRange.only(tripId));
+            req.onsuccess = (e) => {
+              const cursor = e.target.result;
+              if (cursor) {
+                cursor.delete();
+                cursor.continue();
+              }
+            };
+            tx.oncomplete = () => resolve(true);
+          });
+        }
+        let all = await this.getAllTrips();
+        all = all.filter(t => t.id !== tripId);
+        localStorage.setItem('motolog_trips', JSON.stringify(all));
+        return true;
+      },
+
+      async getNotes(tripId) {
+        if (this.db) {
+          return new Promise((resolve) => {
+            const tx = this.db.transaction('notes', 'readonly');
+            const store = tx.objectStore('notes');
+            const idx = store.index('tripId');
+            const req = idx.getAll(IDBKeyRange.only(tripId));
+            req.onsuccess = () => {
+              const list = req.result || [];
+              list.sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
+              resolve(list);
+            };
+            req.onerror = () => resolve([]);
+          });
+        }
+        try {
+          const all = JSON.parse(localStorage.getItem('motolog_notes') || '[]');
+          return all.filter(n => n.tripId === tripId).sort((a,b) => (b.timestamp || 0) - (a.timestamp || 0));
+        } catch(e) { return []; }
+      },
+
+      async getAllNotes() {
+        if (this.db) {
+          return new Promise((resolve) => {
+            const tx = this.db.transaction('notes', 'readonly');
+            const store = tx.objectStore('notes');
+            const req = store.getAll();
+            req.onsuccess = () => resolve(req.result || []);
+            req.onerror = () => resolve([]);
+          });
+        }
+        try {
+          return JSON.parse(localStorage.getItem('motolog_notes') || '[]');
+        } catch(e) { return []; }
+      },
+
+      async saveNote(note) {
+        if (!note.timestamp) note.timestamp = Date.now();
+        if (this.db) {
+          return new Promise((resolve) => {
+            const tx = this.db.transaction('notes', 'readwrite');
+            tx.objectStore('notes').put(note);
+            tx.oncomplete = () => resolve(true);
+            tx.onerror = () => resolve(false);
+          });
+        }
+        const all = await this.getAllNotes();
+        const idx = all.findIndex(n => n.id === note.id);
+        if (idx >= 0) all[idx] = note; else all.unshift(note);
+        localStorage.setItem('motolog_notes', JSON.stringify(all));
+        return true;
+      },
+
+      async deleteNote(id) {
+        if (this.db) {
+          return new Promise((resolve) => {
+            const tx = this.db.transaction('notes', 'readwrite');
+            tx.objectStore('notes').delete(id);
+            tx.oncomplete = () => resolve(true);
+          });
+        }
+        let all = await this.getAllNotes();
+        all = all.filter(n => n.id !== id);
+        localStorage.setItem('motolog_notes', JSON.stringify(all));
+        return true;
+      }
+    };
+
+    // ==========================================
+    // ESTADO GLOBAL DA APLICAÇÃO
+    // ==========================================
+    let trips = [];
+    let currentTrip = null;
     let currentDayId = 1;
     let simulatedTime = null;
     let currentCoords = null;
@@ -694,21 +1223,22 @@
     let mapLayers = [];
     let gpsMarker = null;
 
-    // Inicialização
-    document.addEventListener('DOMContentLoaded', () => {
+    // Inicialização da Aplicação
+    document.addEventListener('DOMContentLoaded', async () => {
       lucide.createIcons();
       initServiceWorker();
       initNetworkListeners();
-      initDayPills();
       initTheme();
       initTabs();
-      initDiario();
-      initSOS();
       initSimTime();
-      updateCockpit(currentDayId);
-      renderRoteiro();
+      initSOS();
 
-      // Inicia monitorização GPS passiva
+      await MotoDB.init();
+      await loadTripsAndState();
+
+      initHubUI();
+      initDiario();
+      initRoteiroActions();
       startGpsTracking();
     });
 
@@ -727,11 +1257,11 @@
       const text = document.getElementById('netStatusText');
       function update() {
         if (navigator.onLine) {
-          badge.className = "flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-green-950 text-green-400 border border-green-800";
+          badge.className = "flex items-center space-x-1 px-2 py-1 rounded-lg text-[10px] font-black bg-green-950 text-green-400 border border-green-800";
           text.textContent = "ONLINE";
         } else {
-          badge.className = "flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-red-950 text-red-400 border border-red-800 animate-pulse";
-          text.textContent = "OFFLINE (SERRA)";
+          badge.className = "flex items-center space-x-1 px-2 py-1 rounded-lg text-[10px] font-black bg-red-950 text-red-400 border border-red-800 animate-pulse";
+          text.textContent = "OFFLINE";
         }
       }
       window.addEventListener('online', update);
@@ -753,7 +1283,7 @@
       });
     }
 
-    // Feedback Háptico (Vibração ao toque para luvas)
+    // Feedback Háptico
     function haptic() {
       if ('vibrate' in navigator) {
         try { navigator.vibrate(15); } catch(e){}
@@ -768,7 +1298,6 @@
           haptic();
           const targetId = tab.getAttribute('data-target');
 
-          // Alternar classes dos botões
           tabs.forEach(t => {
             t.classList.remove('text-blue-500');
             t.classList.add('text-gray-400');
@@ -776,7 +1305,6 @@
           tab.classList.add('text-blue-500');
           tab.classList.remove('text-gray-400');
 
-          // Ocultar todas as secções e mostrar o target
           ['tabCockpit', 'tabRoteiro', 'tabMapa', 'tabDiario', 'tabSOS'].forEach(id => {
             const el = document.getElementById(id);
             if (id === targetId) {
@@ -793,12 +1321,699 @@
       });
     }
 
-    // Pílulas de Seleção de Dia
+    // ==========================================
+    // GESTÃO DE VIAGENS (HUB & PASSAPORTE)
+    // ==========================================
+    async function loadTripsAndState() {
+      trips = await MotoDB.getAllTrips();
+
+      if (!trips || trips.length === 0) {
+        await MotoDB.saveTrip(VIAGEM_PIODAO_TEMPLATE);
+        trips = [VIAGEM_PIODAO_TEMPLATE];
+
+        const legacyNotes = JSON.parse(localStorage.getItem('roadlog_local_notes') || '[]');
+        if (legacyNotes && legacyNotes.length) {
+          for (const n of legacyNotes) {
+            n.tripId = VIAGEM_PIODAO_TEMPLATE.id;
+            await MotoDB.saveNote(n);
+          }
+        }
+      }
+
+      const savedActiveId = localStorage.getItem('motolog_active_trip_id');
+      currentTrip = trips.find(t => t.id === savedActiveId) || trips[0];
+      currentDayId = (currentTrip.dias && currentTrip.dias.length) ? currentTrip.dias[0].id : 1;
+
+      applyActiveTrip();
+    }
+
+    function applyActiveTrip() {
+      localStorage.setItem('motolog_active_trip_id', currentTrip.id);
+
+      document.getElementById('headerTitle').textContent = currentTrip.titulo;
+      const statusText = getStatusLabel(currentTrip.status);
+      document.getElementById('headerSubtitle').textContent = `${statusText} · ${currentTrip.kmTotal || 0} km`;
+      
+      const dot = document.getElementById('headerTripStatusDot');
+      if (currentTrip.status === 'em_curso') {
+        dot.className = "w-2.5 h-2.5 rounded-full bg-green-400 absolute -top-1 -right-1 border-2 border-gray-900 animate-pulse";
+      } else if (currentTrip.status === 'concluida') {
+        dot.className = "w-2.5 h-2.5 rounded-full bg-blue-400 absolute -top-1 -right-1 border-2 border-gray-900";
+      } else {
+        dot.className = "w-2.5 h-2.5 rounded-full bg-yellow-400 absolute -top-1 -right-1 border-2 border-gray-900";
+      }
+
+      document.getElementById('roteiroTripTitle').textContent = currentTrip.titulo;
+      document.getElementById('roteiroTripSubtitle').textContent = `${currentTrip.dias ? currentTrip.dias.length : 0} Etapas · ${currentTrip.kmTotal || 0} km`;
+      document.getElementById('diarioTripName').textContent = currentTrip.titulo;
+
+      updateCockpitStatusBanner();
+      initDayPills();
+      updateCockpit(currentDayId);
+      renderRoteiro();
+      renderDiarioFeed();
+
+      if (leafMap) {
+        updateMapDay(currentDayId);
+      }
+
+      renderHub();
+    }
+
+    function getStatusLabel(status) {
+      if (status === 'concluida') return '🏁 Concluída';
+      if (status === 'em_curso') return '🟢 Na Estrada';
+      return '📝 Planeamento';
+    }
+
+    function updateCockpitStatusBanner() {
+      const icon = document.getElementById('cockpitStatusIcon');
+      const title = document.getElementById('cockpitStatusTitle');
+      const desc = document.getElementById('cockpitStatusDesc');
+      const actionBtn = document.getElementById('btnCockpitAction');
+
+      if (currentTrip.status === 'concluida') {
+        icon.textContent = '🏁';
+        title.textContent = 'Viagem Concluída';
+        title.className = 'text-xs font-black uppercase tracking-wider text-blue-400 block';
+        desc.textContent = 'Todas as etapas e memórias gravadas no teu arquivo.';
+        actionBtn.className = 'btn-tactile px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-black shadow flex items-center space-x-1';
+        actionBtn.innerHTML = '<i data-lucide="book-open" class="w-3.5 h-3.5"></i><span>Caderno</span>';
+        actionBtn.onclick = () => openMemoriesReport();
+      } else if (currentTrip.status === 'em_curso') {
+        icon.textContent = '🟢';
+        title.textContent = 'Viagem Na Estrada';
+        title.className = 'text-xs font-black uppercase tracking-wider text-green-400 block';
+        desc.textContent = 'Cockpit ativo. Regista notas e abastecimentos no caminho.';
+        actionBtn.className = 'btn-tactile px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black shadow flex items-center space-x-1';
+        actionBtn.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5"></i><span>Concluir</span>';
+        actionBtn.onclick = async () => {
+          if (confirm('Queres marcar esta viagem como Concluída?')) {
+            currentTrip.status = 'concluida';
+            await MotoDB.saveTrip(currentTrip);
+            applyActiveTrip();
+          }
+        };
+      } else {
+        icon.textContent = '📝';
+        title.textContent = 'Em Planeamento';
+        title.className = 'text-xs font-black uppercase tracking-wider text-yellow-400 block';
+        desc.textContent = 'Revê o roteiro antes de arrancar.';
+        actionBtn.className = 'btn-tactile px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded-xl text-xs font-black shadow flex items-center space-x-1';
+        actionBtn.innerHTML = '<i data-lucide="play" class="w-3.5 h-3.5"></i><span>Arrancar!</span>';
+        actionBtn.onclick = async () => {
+          currentTrip.status = 'em_curso';
+          await MotoDB.saveTrip(currentTrip);
+          applyActiveTrip();
+        };
+      }
+      lucide.createIcons();
+    }
+
+    function initHubUI() {
+      document.getElementById('btnHeaderHubToggle').addEventListener('click', () => {
+        haptic();
+        openHub();
+      });
+      document.getElementById('btnOpenHub').addEventListener('click', () => {
+        haptic();
+        openHub();
+      });
+      document.getElementById('btnCloseHub').addEventListener('click', () => {
+        haptic();
+        closeHub();
+      });
+
+      document.getElementById('btnOpenNewTripModal').addEventListener('click', () => {
+        haptic();
+        openNewTripModal();
+      });
+      document.getElementById('btnCloseNewTrip').addEventListener('click', closeNewTripModal);
+      document.getElementById('btnCancelNewTrip').addEventListener('click', closeNewTripModal);
+      document.getElementById('btnSaveNewTripSubmit').addEventListener('click', handleCreateTrip);
+
+      document.getElementById('btnCloseEditTrip').addEventListener('click', closeEditTripModal);
+      document.getElementById('btnCancelEditTrip').addEventListener('click', closeEditTripModal);
+      document.getElementById('btnSaveEditTripSubmit').addEventListener('click', handleSaveEditTrip);
+
+      document.getElementById('btnExportBackup').addEventListener('click', exportFullBackup);
+      document.getElementById('btnImportBackupTrigger').addEventListener('click', () => {
+        document.getElementById('inputImportBackup').click();
+      });
+      document.getElementById('inputImportBackup').addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          importFullBackup(e.target.files[0]);
+        }
+      });
+
+      document.getElementById('btnOpenMemories').addEventListener('click', () => openMemoriesReport());
+      document.getElementById('btnCloseMemories').addEventListener('click', () => {
+        document.getElementById('modalMemoriesReport').classList.add('hidden');
+      });
+      document.getElementById('btnPrintMemories').addEventListener('click', () => window.print());
+    }
+
+    function openHub() {
+      renderHub();
+      document.getElementById('modalHub').classList.remove('hidden');
+    }
+    function closeHub() {
+      document.getElementById('modalHub').classList.add('hidden');
+    }
+
+    async function renderHub() {
+      const container = document.getElementById('hubTripsList');
+      if (!container) return;
+
+      const allTrips = await MotoDB.getAllTrips();
+      const allNotes = await MotoDB.getAllNotes();
+
+      const totalKm = allTrips.reduce((acc, t) => acc + (t.kmTotal || 0), 0);
+      const totalDays = allTrips.reduce((acc, t) => acc + (t.dias ? t.dias.length : 0), 0);
+
+      document.getElementById('hubStatTrips').textContent = allTrips.length;
+      document.getElementById('hubStatKm').textContent = totalKm;
+      document.getElementById('hubStatDays').textContent = totalDays;
+      document.getElementById('hubStatNotes').textContent = allNotes.length;
+      document.getElementById('hubTripsCountLabel').textContent = `${allTrips.length} ${allTrips.length === 1 ? 'viagem' : 'viagens'}`;
+
+      container.innerHTML = allTrips.map(t => {
+        const isActive = t.id === currentTrip.id;
+        const tripNotes = allNotes.filter(n => n.tripId === t.id);
+        const photoCount = tripNotes.reduce((acc, n) => acc + (n.photos ? n.photos.length : 0), 0);
+
+        let badgeClass = "bg-gray-800 text-gray-300 border-gray-700";
+        let badgeText = "📝 PLANEAMENTO";
+        if (t.status === 'em_curso') {
+          badgeClass = "bg-green-950 text-green-400 border-green-700 animate-pulse";
+          badgeText = "🟢 NA ESTRADA";
+        } else if (t.status === 'concluida') {
+          badgeClass = "bg-blue-950 text-blue-400 border-blue-700";
+          badgeText = "🏁 CONCLUÍDA";
+        }
+
+        return `
+          <div class="card-surface rounded-2xl p-4 border transition ${isActive ? 'border-blue-500 shadow-lg shadow-blue-950/40 ring-1 ring-blue-500' : 'border-gray-800'} space-y-3">
+            <div class="flex justify-between items-start">
+              <div>
+                <div class="flex items-center space-x-2">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-black border ${badgeClass}">${badgeText}</span>
+                  ${isActive ? '<span class="text-[10px] font-extrabold text-blue-400 uppercase">Ativa</span>' : ''}
+                </div>
+                <h3 class="text-base font-black text-white mt-1">${t.titulo}</h3>
+                <p class="text-xs text-gray-400">${t.datas || 'Sem data'} · ${t.mota || 'Mota'}</p>
+                ${t.origemDestino ? `<p class="text-[11px] text-gray-500 mt-0.5">${t.origemDestino}</p>` : ''}
+              </div>
+              <div class="text-right">
+                <span class="text-base font-black text-white">${t.kmTotal || 0} km</span>
+                <span class="text-[10px] text-gray-400 block">${t.dias ? t.dias.length : 0} etapas</span>
+              </div>
+            </div>
+
+            <div class="flex items-center space-x-3 text-xs text-gray-400 border-t border-gray-800/80 pt-2">
+              <span>✍️ ${tripNotes.length} notas</span>
+              <span>📷 ${photoCount} fotos</span>
+            </div>
+
+            <div class="flex items-center justify-between pt-1 gap-1.5 flex-wrap">
+              <div class="flex items-center space-x-1.5">
+                ${!isActive ? `
+                  <button onclick="switchActiveTrip('${t.id}')" class="btn-tactile px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black shadow">
+                    Abrir Viagem
+                  </button>
+                ` : `
+                  <span class="text-xs font-black text-blue-400 px-2 py-1 bg-blue-950/50 rounded-lg border border-blue-900">Em Cockpit</span>
+                `}
+                <button onclick="openMemoriesReport('${t.id}')" class="btn-tactile px-2.5 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-bold border border-gray-700">
+                  📖 Caderno
+                </button>
+              </div>
+
+              <div class="flex items-center space-x-1">
+                <button onclick="openEditTripModal('${t.id}')" class="p-1.5 rounded-lg hover:bg-gray-800 text-gray-400" title="Editar Detalhes">
+                  <i data-lucide="edit-3" class="w-4 h-4"></i>
+                </button>
+                <button onclick="exportSingleTrip('${t.id}')" class="p-1.5 rounded-lg hover:bg-gray-800 text-gray-400" title="Exportar Ficheiro">
+                  <i data-lucide="share" class="w-4 h-4"></i>
+                </button>
+                ${allTrips.length > 1 ? `
+                  <button onclick="confirmDeleteTrip('${t.id}')" class="p-1.5 rounded-lg hover:bg-gray-800 text-red-400" title="Apagar Viagem">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    async function switchActiveTrip(tripId) {
+      haptic();
+      const trip = trips.find(t => t.id === tripId);
+      if (!trip) return;
+      currentTrip = trip;
+      currentDayId = (currentTrip.dias && currentTrip.dias.length) ? currentTrip.dias[0].id : 1;
+      applyActiveTrip();
+      closeHub();
+    }
+
+    function openNewTripModal() {
+      document.getElementById('inputNewTripTitle').value = '';
+      document.getElementById('inputNewTripMota').value = currentTrip ? currentTrip.mota : 'Mota Principal';
+      document.getElementById('selectNewTripStatus').value = 'planeada';
+      document.getElementById('inputNewTripOrigin').value = '';
+      document.getElementById('inputNewTripDest').value = '';
+      document.getElementById('inputNewTripDaysCount').value = '3';
+      
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('inputNewTripStartDate').value = today;
+      document.getElementById('inputNewTripEndDate').value = today;
+
+      document.getElementById('modalNewTrip').classList.remove('hidden');
+    }
+    function closeNewTripModal() {
+      document.getElementById('modalNewTrip').classList.add('hidden');
+    }
+
+    async function handleCreateTrip() {
+      haptic();
+      const title = document.getElementById('inputNewTripTitle').value.trim();
+      if (!title) {
+        alert('Por favor insere o nome da Road Trip.');
+        return;
+      }
+      const mota = document.getElementById('inputNewTripMota').value.trim() || 'Mota';
+      const status = document.getElementById('selectNewTripStatus').value;
+      const start = document.getElementById('inputNewTripStartDate').value;
+      const end = document.getElementById('inputNewTripEndDate').value;
+      const orig = document.getElementById('inputNewTripOrigin').value.trim();
+      const dest = document.getElementById('inputNewTripDest').value.trim();
+      const daysCount = parseInt(document.getElementById('inputNewTripDaysCount').value) || 3;
+
+      const colors = ["#2F80ED", "#E67E22", "#27AE60", "#8E44AD", "#E74C3C", "#F39C12", "#16A085"];
+      const generatedDias = [];
+
+      for (let i = 1; i <= daysCount; i++) {
+        const dObj = new Date(start || new Date());
+        dObj.setDate(dObj.getDate() + (i - 1));
+        const dStr = dObj.toISOString().split('T')[0];
+        const dFmt = dObj.toLocaleDateString('pt-PT', { weekday: 'short', day: 'numeric', month: 'short' });
+
+        generatedDias.push({
+          id: i,
+          titulo: i === 1 ? `Arranque de ${orig || 'Início'}` : (i === daysCount ? `Chegada a ${dest || 'Fim'}` : `Etapa ${i}`),
+          dataStr: dStr,
+          dataFmt: dFmt,
+          km: 150,
+          min: 120,
+          cor: colors[(i - 1) % colors.length],
+          autoestrada: false,
+          paragens: [
+            { nome: i === 1 ? (orig || "Partida") : `Ponto ${i}`, lat: 39.5, lon: -8.5, hora: "09:30" },
+            { nome: i === daysCount ? (dest || "Chegada") : `Paragem ${i}`, lat: 39.8, lon: -8.2, hora: "15:00" }
+          ],
+          horario: [
+            { hora: "09:30", txt: "Partida", det: "Depósito cheio" },
+            { hora: "15:00", txt: "Chegada prevista", det: "" }
+          ],
+          vistas: ["Curvas da serra", "Paisagem local"],
+          comer: [{ quando: "Almoço", nome: "Restaurante típico" }],
+          dormir: i < daysCount ? { nome: "Alojamento local", reservado: false } : null,
+          combustivel: [],
+          aviso_combustivel: "",
+          dica: "Atestar a moto antes de entrar em zonas isoladas."
+        });
+      }
+
+      const totalKm = generatedDias.reduce((acc, d) => acc + d.km, 0);
+
+      const newTrip = {
+        id: 'trip_' + Date.now(),
+        titulo: title,
+        subtitulo: `${daysCount} Etapas · ${totalKm} km`,
+        status: status,
+        datas: start && end ? `${start} a ${end}` : `${daysCount} Dias`,
+        mota: mota,
+        origem: orig,
+        destino: dest,
+        origemDestino: orig && dest ? `${orig} ➔ ${dest}` : '',
+        kmTotal: totalKm,
+        minTotal: daysCount * 120,
+        dias: generatedDias
+      };
+
+      await MotoDB.saveTrip(newTrip);
+      trips.unshift(newTrip);
+      currentTrip = newTrip;
+      currentDayId = 1;
+
+      closeNewTripModal();
+      closeHub();
+      applyActiveTrip();
+      alert(`Road Trip "${title}" criada com sucesso! Podes agora editar etapas e paragens.`);
+    }
+
+    function openEditTripModal(tripId) {
+      const trip = trips.find(t => t.id === tripId);
+      if (!trip) return;
+
+      document.getElementById('editTripId').value = trip.id;
+      document.getElementById('inputEditTripTitle').value = trip.titulo;
+      document.getElementById('selectEditTripStatus').value = trip.status;
+      document.getElementById('inputEditTripMota').value = trip.mota || '';
+      document.getElementById('inputEditTripDates').value = trip.datas || '';
+      document.getElementById('inputEditTripRoute').value = trip.origemDestino || '';
+
+      document.getElementById('modalEditTrip').classList.remove('hidden');
+    }
+    function closeEditTripModal() {
+      document.getElementById('modalEditTrip').classList.add('hidden');
+    }
+
+    async function handleSaveEditTrip() {
+      haptic();
+      const id = document.getElementById('editTripId').value;
+      const trip = trips.find(t => t.id === id);
+      if (!trip) return;
+
+      trip.titulo = document.getElementById('inputEditTripTitle').value.trim() || trip.titulo;
+      trip.status = document.getElementById('selectEditTripStatus').value;
+      trip.mota = document.getElementById('inputEditTripMota').value.trim();
+      trip.datas = document.getElementById('inputEditTripDates').value.trim();
+      trip.origemDestino = document.getElementById('inputEditTripRoute').value.trim();
+
+      await MotoDB.saveTrip(trip);
+      closeEditTripModal();
+      applyActiveTrip();
+      renderHub();
+    }
+
+    async function confirmDeleteTrip(tripId) {
+      const trip = trips.find(t => t.id === tripId);
+      if (!trip) return;
+      if (!confirm(`Tens a certeza que queres apagar a viagem "${trip.titulo}" e todo o seu diário?`)) return;
+
+      haptic();
+      await MotoDB.deleteTrip(tripId);
+      trips = trips.filter(t => t.id !== tripId);
+      if (currentTrip.id === tripId) {
+        currentTrip = trips[0];
+        currentDayId = 1;
+      }
+      applyActiveTrip();
+      renderHub();
+    }
+
+    async function exportFullBackup() {
+      haptic();
+      const allTrips = await MotoDB.getAllTrips();
+      const allNotes = await MotoDB.getAllNotes();
+
+      const backupData = {
+        app: "MotoLogHub",
+        version: "2.0",
+        exportDate: new Date().toISOString(),
+        trips: allTrips,
+        notes: allNotes
+      };
+
+      const dateStr = new Date().toISOString().split('T')[0];
+      downloadFile(JSON.stringify(backupData, null, 2), `motolog_hub_backup_${dateStr}.json`, 'application/json');
+    }
+
+    async function exportSingleTrip(tripId) {
+      haptic();
+      const trip = trips.find(t => t.id === tripId);
+      if (!trip) return;
+      const tripNotes = await MotoDB.getNotes(tripId);
+
+      const tripData = {
+        app: "MotoLogHub",
+        version: "2.0",
+        trip: trip,
+        notes: tripNotes
+      };
+
+      const name = trip.titulo.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      downloadFile(JSON.stringify(tripData, null, 2), `roadtrip_${name}.json`, 'application/json');
+    }
+
+    async function importFullBackup(file) {
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+
+        if (data.trips && Array.isArray(data.trips)) {
+          for (const t of data.trips) {
+            await MotoDB.saveTrip(t);
+          }
+          if (data.notes && Array.isArray(data.notes)) {
+            for (const n of data.notes) {
+              await MotoDB.saveNote(n);
+            }
+          }
+        } else if (data.trip) {
+          await MotoDB.saveTrip(data.trip);
+          if (data.notes && Array.isArray(data.notes)) {
+            for (const n of data.notes) {
+              await MotoDB.saveNote(n);
+            }
+          }
+        } else {
+          alert('Ficheiro de backup inválido.');
+          return;
+        }
+
+        await loadTripsAndState();
+        renderHub();
+        alert('Viagens e memórias importadas com sucesso!');
+      } catch (err) {
+        alert('Erro ao processar ficheiro: ' + err.message);
+      }
+    }
+
+    async function openMemoriesReport(tripId = null) {
+      haptic();
+      const trip = tripId ? trips.find(t => t.id === tripId) : currentTrip;
+      if (!trip) return;
+
+      const notes = await MotoDB.getNotes(trip.id);
+
+      let totalLiters = 0;
+      let totalCost = 0;
+      let photoList = [];
+
+      notes.forEach(n => {
+        if (n.photos && n.photos.length) {
+          n.photos.forEach(p => {
+            photoList.push({
+              data: p.data,
+              isVideo: p.isVideo,
+              time: n.time,
+              dayId: n.dayId,
+              text: n.text
+            });
+          });
+        }
+        const match = n.text.match(/ABASTECIMENTO:\s*([\d\.]+)L\s*·\s*([\d\.]+)€/);
+        if (match) {
+          totalLiters += parseFloat(match[1]) || 0;
+          totalCost += parseFloat(match[2]) || 0;
+        }
+      });
+
+      const container = document.getElementById('memoriesReportContent');
+
+      container.innerHTML = `
+        <div class="card-surface rounded-3xl p-6 border shadow-2xl relative overflow-hidden border-t-8" style="border-top-color: #2F80ED;">
+          <div class="flex justify-between items-start">
+            <span class="px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider bg-blue-950 text-blue-400 border border-blue-800">
+              ${getStatusLabel(trip.status)}
+            </span>
+            <span class="text-xs text-gray-400 font-mono">${trip.datas || ''}</span>
+          </div>
+
+          <h1 class="text-2xl md:text-3xl font-black text-white mt-3 tracking-tight">${trip.titulo}</h1>
+          <p class="text-sm text-gray-400 font-medium mt-1">🏍️ ${trip.mota || 'Mota'} ${trip.origemDestino ? '· ' + trip.origemDestino : ''}</p>
+
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 mt-5">
+            <div class="bg-gray-900 bg-opacity-80 p-3 rounded-2xl border border-gray-800 text-center">
+              <span class="text-xs text-gray-400 block font-bold">Total Conduzido</span>
+              <span class="text-xl font-black text-white">${trip.kmTotal || 0} km</span>
+            </div>
+            <div class="bg-gray-900 bg-opacity-80 p-3 rounded-2xl border border-gray-800 text-center">
+              <span class="text-xs text-gray-400 block font-bold">Etapas</span>
+              <span class="text-xl font-black text-white">${trip.dias ? trip.dias.length : 0} dias</span>
+            </div>
+            <div class="bg-gray-900 bg-opacity-80 p-3 rounded-2xl border border-gray-800 text-center">
+              <span class="text-xs text-gray-400 block font-bold">Combustível</span>
+              <span class="text-xl font-black text-yellow-400">${totalLiters.toFixed(1)} L</span>
+            </div>
+            <div class="bg-gray-900 bg-opacity-80 p-3 rounded-2xl border border-gray-800 text-center">
+              <span class="text-xs text-gray-400 block font-bold">Memórias & Fotos</span>
+              <span class="text-xl font-black text-purple-400">${notes.length} / ${photoList.length}</span>
+            </div>
+          </div>
+        </div>
+
+        ${photoList.length > 0 ? `
+          <div class="space-y-3">
+            <h2 class="text-sm font-extrabold uppercase tracking-wider text-gray-400 flex items-center space-x-2">
+              <i data-lucide="camera" class="w-4 h-4 text-blue-400"></i>
+              <span>Galeria de Memórias (${photoList.length} capturas)</span>
+            </h2>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+              ${photoList.map(p => `
+                <div class="rounded-2xl overflow-hidden card-surface border border-gray-800 group relative">
+                  ${p.isVideo ? `
+                    <video src="${p.data}" controls class="w-full h-40 object-cover"></video>
+                  ` : `
+                    <img src="${p.data}" alt="Foto" class="w-full h-40 object-cover cursor-pointer hover:scale-105 transition duration-300" onclick="window.open(this.src)">
+                  `}
+                  <div class="p-2 text-[10px] text-gray-400 bg-gray-900/90 truncate">
+                    Dia ${p.dayId} · ${p.time}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        <div class="space-y-4">
+          <h2 class="text-sm font-extrabold uppercase tracking-wider text-gray-400 flex items-center space-x-2">
+            <i data-lucide="book-open" class="w-4 h-4 text-green-400"></i>
+            <span>Crónica & Incidências da Estrada</span>
+          </h2>
+
+          ${(trip.dias || []).map(d => {
+            const dayNotes = notes.filter(n => n.dayId === d.id);
+            return `
+              <div class="card-surface rounded-2xl p-4 border border-gray-800 space-y-3">
+                <div class="flex justify-between items-start border-b border-gray-800 pb-2">
+                  <div>
+                    <span class="text-[10px] font-black uppercase text-blue-400">DIA ${d.id} · ${d.dataFmt}</span>
+                    <h3 class="text-base font-extrabold text-white mt-0.5">${d.titulo}</h3>
+                    <p class="text-xs text-gray-400">${d.paragens.map(p => p.nome).join(' → ')} (${d.km} km)</p>
+                  </div>
+                  <span class="text-xs px-2 py-1 bg-gray-800 text-gray-300 rounded">${d.autoestrada ? 'Autoestrada' : 'Nacionais'}</span>
+                </div>
+
+                ${d.dica ? `<p class="text-xs text-gray-300 italic bg-gray-900/70 p-2.5 rounded-xl border border-gray-800">💡 "${d.dica}"</p>` : ''}
+
+                <div class="space-y-2 pt-1">
+                  ${dayNotes.length > 0 ? dayNotes.map(n => `
+                    <div class="bg-gray-900/60 p-3 rounded-xl border border-gray-800/80 text-xs space-y-1">
+                      <div class="flex justify-between text-gray-500 font-mono text-[10px]">
+                        <span>${n.time} · por ${n.author}</span>
+                      </div>
+                      <p class="text-gray-200 whitespace-pre-line">${n.text}</p>
+                    </div>
+                  `).join('') : '<p class="text-xs text-gray-500 italic">Sem notas registadas para este dia.</p>'}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+
+      lucide.createIcons();
+      document.getElementById('modalMemoriesReport').classList.remove('hidden');
+    }
+
+    function initRoteiroActions() {
+      const btnAdd = document.getElementById('btnAddStage');
+      if (btnAdd) {
+        btnAdd.addEventListener('click', () => {
+          haptic();
+          openAddStageModal();
+        });
+      }
+      document.getElementById('btnCloseAddStage').addEventListener('click', closeAddStageModal);
+      document.getElementById('btnCancelAddStage').addEventListener('click', closeAddStageModal);
+      document.getElementById('btnSaveStageSubmit').addEventListener('click', handleSaveStage);
+    }
+
+    function openAddStageModal() {
+      document.getElementById('inputStageTitle').value = '';
+      document.getElementById('inputStageKm').value = '';
+      document.getElementById('inputStageMin').value = '';
+      document.getElementById('inputStageFrom').value = '';
+      document.getElementById('inputStageTo').value = '';
+      document.getElementById('inputStageDate').value = new Date().toISOString().split('T')[0];
+      document.getElementById('modalAddStage').classList.remove('hidden');
+    }
+    function closeAddStageModal() {
+      document.getElementById('modalAddStage').classList.add('hidden');
+    }
+
+    async function handleSaveStage() {
+      haptic();
+      const title = document.getElementById('inputStageTitle').value.trim();
+      if (!title) {
+        alert('Por favor insere o título da etapa.');
+        return;
+      }
+      const dStr = document.getElementById('inputStageDate').value || new Date().toISOString().split('T')[0];
+      const isHwy = document.getElementById('selectStageRoad').value === 'true';
+      const km = parseInt(document.getElementById('inputStageKm').value) || 100;
+      const min = parseInt(document.getElementById('inputStageMin').value) || 90;
+      const from = document.getElementById('inputStageFrom').value.trim() || 'Partida';
+      const to = document.getElementById('inputStageTo').value.trim() || 'Chegada';
+
+      if (!currentTrip.dias) currentTrip.dias = [];
+      const newId = currentTrip.dias.length + 1;
+      const colors = ["#2F80ED", "#E67E22", "#27AE60", "#8E44AD", "#E74C3C", "#F39C12"];
+
+      const dateObj = new Date(dStr);
+      const dFmt = dateObj.toLocaleDateString('pt-PT', { weekday: 'short', day: 'numeric', month: 'short' });
+
+      const newDay = {
+        id: newId,
+        titulo: title,
+        dataStr: dStr,
+        dataFmt: dFmt,
+        km: km,
+        min: min,
+        cor: colors[(newId - 1) % colors.length],
+        autoestrada: isHwy,
+        paragens: [
+          { nome: from, lat: 39.5, lon: -8.5, hora: "09:30" },
+          { nome: to, lat: 39.8, lon: -8.2, hora: "15:00" }
+        ],
+        horario: [
+          { hora: "09:30", txt: `Saída de ${from}`, det: "" },
+          { hora: "15:00", txt: `Chegada a ${to}`, det: "" }
+        ],
+        vistas: [],
+        comer: [{ quando: "Almoço", nome: "Restaurante de estrada" }],
+        dormir: { nome: `Hotel / Alojamento em ${to}`, reservado: false },
+        combustivel: [],
+        aviso_combustivel: "",
+        dica: "Verificar pressão dos pneus antes de arrancar."
+      };
+
+      currentTrip.dias.push(newDay);
+      currentTrip.kmTotal = currentTrip.dias.reduce((acc, d) => acc + d.km, 0);
+
+      await MotoDB.saveTrip(currentTrip);
+      closeAddStageModal();
+      applyActiveTrip();
+    }
+
     function initDayPills() {
       const container = document.getElementById('dayPillsContainer');
       container.innerHTML = '';
 
-      DIAS.forEach(d => {
+      const dias = currentTrip.dias || [];
+      if (!dias.length) {
+        container.innerHTML = '<span class="text-xs text-gray-500 py-1">Sem etapas nesta viagem. Adiciona uma em "Roteiro".</span>';
+        return;
+      }
+
+      dias.forEach(d => {
         const btn = document.createElement('button');
         btn.id = `dayPill_${d.id}`;
         btn.className = `btn-tactile flex-shrink-0 px-3.5 py-2 rounded-xl text-xs font-black transition border ${
@@ -806,7 +2021,7 @@
             ? 'bg-blue-600 text-white border-blue-400 shadow-md' 
             : 'bg-gray-800 text-gray-300 border-gray-700'
         }`;
-        btn.innerHTML = `<span>Dia ${d.id}</span> <span class="opacity-75 ml-1 font-semibold">${d.dataFmt.split(',')[0]}</span>`;
+        btn.innerHTML = `<span>Dia ${d.id}</span> <span class="opacity-75 ml-1 font-semibold">${d.dataFmt ? d.dataFmt.split(',')[0] : ''}</span>`;
         btn.addEventListener('click', () => {
           haptic();
           currentDayId = d.id;
@@ -821,7 +2036,8 @@
     }
 
     function updateDayPills() {
-      DIAS.forEach(d => {
+      const dias = currentTrip.dias || [];
+      dias.forEach(d => {
         const btn = document.getElementById(`dayPill_${d.id}`);
         if (!btn) return;
         if (d.id === currentDayId) {
@@ -832,27 +2048,33 @@
       });
     }
 
+    // ==========================================
     // ATUALIZAÇÃO DO COCKPIT (ECRÃ PRINCIPAL)
+    // ==========================================
     function updateCockpit(dayId) {
-      const d = DIAS.find(x => x.id === dayId) || DIAS[0];
+      const dias = (currentTrip && currentTrip.dias) ? currentTrip.dias : [];
+      if (!dias.length) return;
+
+      const d = dias.find(x => x.id === dayId) || dias[0];
       const now = getEffectiveTime();
 
-      document.getElementById('cockpitDayBadge').textContent = `DIA ${d.id} · ${d.dataFmt.toUpperCase()}`;
-      document.getElementById('cockpitDayBadge').style.borderColor = d.cor;
-      document.getElementById('heroCard').style.borderTopColor = d.cor;
+      document.getElementById('cockpitDayBadge').textContent = `DIA ${d.id} · ${(d.dataFmt || '').toUpperCase()}`;
+      document.getElementById('cockpitDayBadge').style.borderColor = d.cor || '#2F80ED';
+      document.getElementById('heroCard').style.borderTopColor = d.cor || '#2F80ED';
       document.getElementById('cockpitRoadType').innerHTML = d.autoestrada ? "🛣️ Autoestrada" : "🌄 Nacionais & Curvas";
       document.getElementById('cockpitTitle').textContent = d.titulo;
-      document.getElementById('cockpitRoute').textContent = d.paragens.map(p => p.nome).join(' → ');
+      document.getElementById('cockpitRoute').textContent = (d.paragens || []).map(p => p.nome).join(' → ');
 
       document.getElementById('metricKm').textContent = `${d.km} km`;
       document.getElementById('metricTime').textContent = formatMins(d.min);
-      document.getElementById('metricStops').textContent = d.paragens.length;
+      document.getElementById('metricStops').textContent = (d.paragens || []).length;
 
       // Links 1-Toque de Navegação
-      const gmapsUrl = buildGoogleMapsRoute(d.paragens);
-      const wazeUrl = buildWazeUrl(d.paragens[d.paragens.length - 1].lat, d.paragens[d.paragens.length - 1].lon);
-      document.getElementById('btnNavGoogle').href = gmapsUrl;
-      document.getElementById('btnNavWaze').href = wazeUrl;
+      if (d.paragens && d.paragens.length > 0) {
+        document.getElementById('btnNavGoogle').href = buildGoogleMapsRoute(d.paragens);
+        const lastP = d.paragens[d.paragens.length - 1];
+        document.getElementById('btnNavWaze').href = buildWazeUrl(lastP.lat, lastP.lon);
+      }
 
       // Alerta de Combustível
       const fuelAlert = document.getElementById('fuelAlertBox');
@@ -864,12 +2086,9 @@
       }
 
       // Dica do Dia
-      document.getElementById('cockpitTip').textContent = d.dica;
+      document.getElementById('cockpitTip').textContent = d.dica || 'Atestar a moto antes de zonas isoladas.';
 
-      // Renderizar Horário do Cockpit com destaque "AGORA"
       renderCockpitTimeline(d, now);
-
-      // Carregar Previsão do Tempo para as Paragens do Dia
       fetchWeatherForDay(d);
     }
 
@@ -880,6 +2099,7 @@
     }
 
     function buildGoogleMapsRoute(paragens) {
+      if (!paragens || !paragens.length) return '#';
       const o = paragens[0];
       const f = paragens[paragens.length - 1];
       let url = `https://www.google.com/maps/dir/?api=1&origin=${o.lat},${o.lon}&destination=${f.lat},${f.lon}&travelmode=driving`;
@@ -897,6 +2117,11 @@
     function renderCockpitTimeline(d, now) {
       const container = document.getElementById('cockpitTimeline');
       container.innerHTML = '';
+
+      if (!d.horario || !d.horario.length) {
+        container.innerHTML = '<div class="text-xs text-gray-500 p-2">Sem paragens agendadas.</div>';
+        return;
+      }
 
       const isToday = now.toISOString().split('T')[0] === d.dataStr;
       let currentIndex = -1;
@@ -939,17 +2164,20 @@
       });
     }
 
-    // ==========================================
-    // METEOROLOGIA (OPEN-METEO SEM REQUISITO DE API KEY)
-    // ==========================================
+    // Previsão Meteorológica
     async function fetchWeatherForDay(d) {
       const container = document.getElementById('weatherScrollContainer');
       container.innerHTML = '<div class="text-xs text-gray-500 p-2">A consultar satélite...</div>';
 
+      if (!d.paragens || !d.paragens.length) {
+        container.innerHTML = '<div class="text-xs text-gray-500 p-2">Sem coordenadas para previsão.</div>';
+        return;
+      }
+
       try {
         const tiles = [];
         for (const p of d.paragens) {
-          // Open-Meteo é grátis, fidedigno e cobre todo o território nacional
+          if (!p.lat || !p.lon) continue;
           const url = `https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lon}&hourly=temperature_2m,precipitation_probability,wind_speed_10m&forecast_days=7&timezone=auto`;
           const res = await fetch(url);
           if (res.ok) {
@@ -980,7 +2208,7 @@
           container.innerHTML = '<div class="text-xs text-gray-500 p-2">Previsão disponível mais perto da data.</div>';
         }
       } catch (err) {
-        container.innerHTML = '<div class="text-xs text-gray-500 p-2">Sem rede para meteorologia (a usar estimativa).</div>';
+        container.innerHTML = '<div class="text-xs text-gray-500 p-2">Sem rede (estimativa offline).</div>';
       }
     }
 
@@ -991,27 +2219,39 @@
       const container = document.getElementById('roteiroDaysList');
       container.innerHTML = '';
 
-      DIAS.forEach(d => {
+      const dias = (currentTrip && currentTrip.dias) ? currentTrip.dias : [];
+      if (!dias.length) {
+        container.innerHTML = `
+          <div class="card-surface rounded-2xl p-6 text-center text-gray-400">
+            <span class="text-3xl block mb-2">🗺️</span>
+            <b class="text-sm text-gray-300 block">Roteiro sem etapas</b>
+            <p class="text-xs mt-1">Clica em "+ Etapa" acima para planear o teu trajeto.</p>
+          </div>
+        `;
+        return;
+      }
+
+      dias.forEach(d => {
         const card = document.createElement('div');
         card.className = "card-surface rounded-2xl p-4 shadow-lg border-l-4 space-y-3";
-        card.style.borderLeftColor = d.cor;
+        card.style.borderLeftColor = d.cor || '#2F80ED';
 
-        // Paragens
-        const paragensHtml = d.paragens.map(p => `
+        const paragensHtml = (d.paragens || []).map(p => `
           <div class="flex items-center justify-between py-1 border-b border-gray-800 last:border-0 text-xs">
             <span class="font-bold text-white flex items-center space-x-1.5">
-              <span class="w-2 h-2 rounded-full" style="background:${d.cor}"></span>
+              <span class="w-2 h-2 rounded-full" style="background:${d.cor || '#2F80ED'}"></span>
               <span>${p.nome}</span>
             </span>
             <div class="flex items-center space-x-2">
               <span class="font-mono text-gray-400">~${p.hora}</span>
-              <a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}&travelmode=driving" target="_blank" class="px-2 py-1 bg-gray-800 text-blue-400 rounded text-[11px] font-bold">Ir</a>
+              ${p.lat && p.lon ? `
+                <a href="https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}&travelmode=driving" target="_blank" class="px-2 py-1 bg-gray-800 text-blue-400 rounded text-[11px] font-bold">Ir</a>
+              ` : ''}
             </div>
           </div>
         `).join('');
 
-        // Refeições e Alojamento
-        let comerHtml = d.comer.map(c => {
+        let comerHtml = (d.comer || []).map(c => {
           const res = c.reservado ? '<span class="px-1.5 py-0.5 bg-green-900 text-green-300 rounded text-[10px] font-bold ml-1">Reservado</span>' : '';
           const pe = c.a_pe ? `<div class="text-[11px] text-gray-400 mt-0.5">🚶 ${c.a_pe}</div>` : '';
           return `<div class="text-xs text-gray-300 py-1">🍽️ <b>${c.nome}</b> (${c.quando})${res}${pe}</div>`;
@@ -1020,9 +2260,9 @@
         let dormirHtml = d.dormir ? `
           <div class="text-xs text-gray-300 py-1">
             🛏️ <b>${d.dormir.nome}</b> 
-            <span class="px-1.5 py-0.5 bg-green-900 text-green-300 rounded text-[10px] font-bold ml-1">Reservado</span>
+            ${d.dormir.reservado ? '<span class="px-1.5 py-0.5 bg-green-900 text-green-300 rounded text-[10px] font-bold ml-1">Reservado</span>' : ''}
           </div>
-        ` : '<div class="text-xs text-gray-400">🏠 Chegada a casa</div>';
+        ` : '<div class="text-xs text-gray-400">🏠 Chegada / Destino final</div>';
 
         card.innerHTML = `
           <div class="flex justify-between items-start">
@@ -1032,13 +2272,13 @@
               <p class="text-xs text-gray-400">${d.km} km · ${formatMins(d.min)} · ${d.autoestrada ? 'Autoestrada' : 'Nacionais'}</p>
             </div>
             <button onclick="selectDayFromRoteiro(${d.id})" class="btn-tactile px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow">
-              Abrir Cockpit →
+              Cockpit →
             </button>
           </div>
 
           <div class="bg-gray-900 bg-opacity-70 rounded-xl p-3 border border-gray-800">
             <span class="text-[10px] font-black uppercase text-gray-400 block mb-1">Paragens da Etapa</span>
-            ${paragensHtml}
+            ${paragensHtml || '<span class="text-xs text-gray-500">Sem paragens</span>'}
           </div>
 
           <div class="bg-gray-900 bg-opacity-70 rounded-xl p-3 border border-gray-800">
@@ -1048,7 +2288,7 @@
           </div>
 
           <div class="text-xs text-gray-400 flex items-center justify-between pt-1">
-            <span>📸 ${d.vistas.join(' · ')}</span>
+            <span>📸 ${(d.vistas || []).join(' · ') || 'Sem pontos de vista definidos'}</span>
             <button onclick="downloadSingleGpx(${d.id})" class="text-blue-400 font-bold hover:underline">GPX Dia ${d.id}</button>
           </div>
         `;
@@ -1077,7 +2317,6 @@
           maxZoom: 18
         }).addTo(leafMap);
 
-        // Controlos de zoom ergonómicos
         L.control.zoom({ position: 'topright' }).addTo(leafMap);
 
         document.getElementById('btnMapFilterDay').addEventListener('click', () => {
@@ -1095,37 +2334,38 @@
     function updateMapDay(dayId) {
       if (!leafMap) return;
 
-      // Limpar camadas anteriores
       mapLayers.forEach(l => leafMap.removeLayer(l));
       mapLayers = [];
 
-      const diasToShow = dayId ? DIAS.filter(d => d.id === dayId) : DIAS;
+      const dias = (currentTrip && currentTrip.dias) ? currentTrip.dias : [];
+      const diasToShow = dayId ? dias.filter(d => d.id === dayId) : dias;
       const allCoords = [];
 
       document.getElementById('mapDayIndicator').textContent = dayId ? `Dia ${dayId}` : "Todos os Dias";
       document.getElementById('mapFilterDayNum').textContent = currentDayId;
 
       diasToShow.forEach(d => {
-        const pts = d.paragens.map(p => [p.lat, p.lon]);
+        const pts = (d.paragens || []).filter(p => p.lat && p.lon).map(p => [p.lat, p.lon]);
         allCoords.push(...pts);
 
-        // Linha do dia
-        const poly = L.polyline(pts, {
-          color: d.cor,
-          weight: dayId ? 6 : 4,
-          opacity: 0.9,
-          dashArray: d.autoestrada ? '8, 8' : null
-        }).addTo(leafMap);
-        mapLayers.push(poly);
+        if (pts.length > 1) {
+          const poly = L.polyline(pts, {
+            color: d.cor || '#2F80ED',
+            weight: dayId ? 6 : 4,
+            opacity: 0.9,
+            dashArray: d.autoestrada ? '8, 8' : null
+          }).addTo(leafMap);
+          mapLayers.push(poly);
+        }
 
-        // Marcadores de Paragem
-        d.paragens.forEach((p, idx) => {
+        (d.paragens || []).forEach((p, idx) => {
+          if (!p.lat || !p.lon) return;
           const isStart = idx === 0;
           const isEnd = idx === d.paragens.length - 1;
 
           const marker = L.circleMarker([p.lat, p.lon], {
             radius: isStart || isEnd ? 9 : 6,
-            fillColor: d.cor,
+            fillColor: d.cor || '#2F80ED',
             color: '#FFFFFF',
             weight: 2,
             opacity: 1,
@@ -1144,8 +2384,8 @@
           mapLayers.push(marker);
         });
 
-        // Marcadores de Bombas de Gasolina Críticas
         (d.combustivel || []).forEach(c => {
+          if (!c.coords) return;
           const gasMarker = L.circleMarker(c.coords, {
             radius: 5,
             fillColor: '#F59E0B',
@@ -1228,11 +2468,11 @@
     }
 
     // ==========================================
-    // DIÁRIO DE BORDO (ROAD LOG COM VOZ, FOTOS E STORAGE)
+    // DIÁRIO DE BORDO
     // ==========================================
-    function initDiario() {
-      renderDiarioFeed();
+    let pendingPhotos = [];
 
+    function initDiario() {
       // Chips de categoria rápida
       document.querySelectorAll('.cat-chip').forEach(chip => {
         chip.addEventListener('click', () => {
@@ -1278,7 +2518,6 @@
       }
 
       // Input de Fotos com compressão Canvas
-      let pendingPhotos = [];
       const fileInput = document.getElementById('filePhotoInput');
       fileInput.addEventListener('change', async (e) => {
         const files = Array.from(e.target.files);
@@ -1310,24 +2549,23 @@
 
         const newNote = {
           id: 'note_' + Date.now(),
+          tripId: currentTrip.id,
           dayId: currentDayId,
           text: text,
           author: author,
           time: new Date().toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
           date: new Date().toLocaleDateString('pt-PT'),
+          timestamp: Date.now(),
           photos: pendingPhotos
         };
 
-        // Guardar no LocalStorage
-        saveLocalNote(newNote);
+        await MotoDB.saveNote(newNote);
 
-        // Resetar form
         document.getElementById('txtNoteInput').value = '';
         pendingPhotos = [];
         document.getElementById('lblPhotoCount').textContent = 'Tirar Foto';
-        renderDiarioFeed();
+        await renderDiarioFeed();
 
-        // Tentar sincronização em background se houver Supabase configurado
         syncNoteToSupabase(newNote);
       });
 
@@ -1349,6 +2587,55 @@
         document.getElementById('cloudStatusText').textContent = code ? "Ligado à Nuvem" : "Modo Local (Offline)";
         document.getElementById('modalCloud').classList.add('hidden');
       });
+    }
+
+    async function renderDiarioFeed() {
+      const container = document.getElementById('diarioFeedContainer');
+      const notes = await MotoDB.getNotes(currentTrip.id);
+
+      document.getElementById('diarioStatsSummary').textContent = `${notes.length} ${notes.length === 1 ? 'registo' : 'registos'}`;
+
+      if (!notes.length) {
+        container.innerHTML = `
+          <div class="card-surface rounded-2xl p-6 text-center text-gray-400">
+            <span class="text-3xl block mb-2">📖</span>
+            <b class="text-sm text-gray-300 block">Diário ainda sem registos nesta viagem</b>
+            <p class="text-xs mt-1">Regista abastecimentos, fotos, vídeos e momentos ao longo do caminho.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = notes.map(n => `
+        <div class="card-surface rounded-2xl p-4 shadow border border-gray-800 space-y-2">
+          <div class="flex justify-between items-center text-xs">
+            <div class="flex items-center space-x-1.5 font-bold text-gray-300">
+              <span class="text-blue-400">Dia ${n.dayId}</span>
+              <span>·</span>
+              <span>${n.time}</span>
+              <span class="text-gray-500 font-normal">por ${n.author}</span>
+            </div>
+            <button onclick="handleDeleteNote('${n.id}')" class="text-red-400 hover:text-red-300 text-xs font-semibold">Apagar</button>
+          </div>
+          <p class="text-xs text-white leading-relaxed whitespace-pre-line">${n.text}</p>
+          ${(n.photos && n.photos.length) ? `
+            <div class="grid grid-cols-2 gap-2 pt-2">
+              ${n.photos.map(p => p.isVideo ? `
+                <video src="${p.data}" controls playsinline class="rounded-xl object-cover w-full h-32 border border-gray-800"></video>
+              ` : `
+                <img src="${p.data}" alt="Foto" class="rounded-xl object-cover w-full h-32 border border-gray-800">
+              `).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `).join('');
+    }
+
+    async function handleDeleteNote(id) {
+      if (!confirm('Queres apagar este registo?')) return;
+      haptic();
+      await MotoDB.deleteNote(id);
+      renderDiarioFeed();
     }
 
     function compressImage(file, maxSide = 1200, quality = 0.8) {
@@ -1389,69 +2676,6 @@
       });
     }
 
-    function getLocalNotes() {
-      try {
-        return JSON.parse(localStorage.getItem('roadlog_local_notes') || '[]');
-      } catch (e) {
-        return [];
-      }
-    }
-
-    function saveLocalNote(note) {
-      const notes = getLocalNotes();
-      notes.unshift(note);
-      localStorage.setItem('roadlog_local_notes', JSON.stringify(notes));
-    }
-
-    function deleteNote(id) {
-      if (!confirm('Queres apagar este registo?')) return;
-      haptic();
-      let notes = getLocalNotes();
-      notes = notes.filter(n => n.id !== id);
-      localStorage.setItem('roadlog_local_notes', JSON.stringify(notes));
-      renderDiarioFeed();
-    }
-
-    function renderDiarioFeed() {
-      const container = document.getElementById('diarioFeedContainer');
-      const notes = getLocalNotes();
-
-      if (!notes.length) {
-        container.innerHTML = `
-          <div class="card-surface rounded-2xl p-6 text-center text-gray-400">
-            <span class="text-3xl block mb-2">📖</span>
-            <b class="text-sm text-gray-300 block">Diário ainda sem registos</b>
-            <p class="text-xs mt-1">Regista abastecimentos, fotos, vídeos e momentos ao longo do caminho.</p>
-          </div>
-        `;
-        return;
-      }
-
-      container.innerHTML = notes.map(n => `
-        <div class="card-surface rounded-2xl p-4 shadow border border-gray-800 space-y-2">
-          <div class="flex justify-between items-center text-xs">
-            <div class="flex items-center space-x-1.5 font-bold text-gray-300">
-              <span class="text-blue-400">Dia ${n.dayId}</span>
-              <span>·</span>
-              <span>${n.time}</span>
-              <span class="text-gray-500 font-normal">por ${n.author}</span>
-            </div>
-            <button onclick="deleteNote('${n.id}')" class="text-red-400 hover:text-red-300 text-xs font-semibold">Apagar</button>
-          </div>
-          <p class="text-xs text-white leading-relaxed whitespace-pre-line">${n.text}</p>
-          ${(n.photos && n.photos.length) ? `
-            <div class="grid grid-cols-2 gap-2 pt-2">
-              ${n.photos.map(p => p.isVideo ? `
-                <video src="${p.data}" controls playsinline class="rounded-xl object-cover w-full h-32 border border-gray-800"></video>
-              ` : `
-                <img src="${p.data}" alt="Foto" class="rounded-xl object-cover w-full h-32 border border-gray-800">
-              `).join('')}
-            </div>
-          ` : ''}
-        </div>
-      `).join('');
-    }
-
     async function syncNoteToSupabase(note) {
       const code = localStorage.getItem('roadlog_supa_code');
       const url = localStorage.getItem('roadlog_supa_url');
@@ -1474,7 +2698,7 @@
           })
         });
       } catch (err) {
-        console.log('Sync adiado (offline)');
+        console.log('Sync nuvem adiado (offline)');
       }
     }
 
@@ -1492,7 +2716,7 @@
       });
 
       // Registar Abastecimento
-      document.getElementById('btnLogFuel').addEventListener('click', () => {
+      document.getElementById('btnLogFuel').addEventListener('click', async () => {
         haptic();
         const km = document.getElementById('fuelInputKm').value;
         const lit = document.getElementById('fuelInputLiters').value;
@@ -1505,13 +2729,16 @@
 
         const fuelNote = {
           id: 'fuel_' + Date.now(),
+          tripId: currentTrip.id,
           dayId: currentDayId,
           text: `⛽ ABASTECIMENTO: ${lit || '?'}L · ${cost ? cost + '€' : ''} aos ${km ? km + ' km' : 'km n/d'}. Depósito atestado.`,
           author: 'Piloto',
           time: new Date().toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }),
-          date: new Date().toLocaleDateString('pt-PT')
+          date: new Date().toLocaleDateString('pt-PT'),
+          timestamp: Date.now()
         };
-        saveLocalNote(fuelNote);
+
+        await MotoDB.saveNote(fuelNote);
         renderDiarioFeed();
 
         document.getElementById('fuelInputKm').value = '';
@@ -1520,35 +2747,40 @@
         alert('Abastecimento registado com sucesso no Diário!');
       });
 
-      // Download GPX Completo
+      // Download GPX Completo da Viagem Ativa
       document.getElementById('btnDownloadAllGpx').addEventListener('click', () => {
         haptic();
-        const gpxData = generateGpx(DIAS);
-        downloadFile(gpxData, 'viagem_piodao_completa.gpx', 'application/gpx+xml');
+        const gpxData = generateGpx(currentTrip.dias || []);
+        const name = currentTrip.titulo.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        downloadFile(gpxData, `${name}_completa.gpx`, 'application/gpx+xml');
       });
 
-      // Download Guia Offline HTML
+      // Download Guia Offline HTML da Viagem Ativa
       document.getElementById('btnDownloadOfflineHtml').addEventListener('click', () => {
         haptic();
         const htmlData = generateOfflineGuide();
-        downloadFile(htmlData, 'guia_offline_viagem_piodao.html', 'text/html');
+        const name = currentTrip.titulo.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        downloadFile(htmlData, `guia_offline_${name}.html`, 'text/html');
       });
     }
 
     function downloadSingleGpx(dayId) {
       haptic();
-      const d = DIAS.find(x => x.id === dayId);
+      const dias = (currentTrip && currentTrip.dias) ? currentTrip.dias : [];
+      const d = dias.find(x => x.id === dayId);
       if (!d) return;
       const gpxData = generateGpx([d]);
       downloadFile(gpxData, `dia_${d.id}_${d.titulo.toLowerCase().replace(/\s+/g, '_')}.gpx`, 'application/gpx+xml');
     }
 
     function generateGpx(diasList) {
-      let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="RoadLogMoto" xmlns="http://www.topografix.com/GPX/1/1">\n`;
+      let xml = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="MotoLogHub" xmlns="http://www.topografix.com/GPX/1/1">\n`;
       diasList.forEach(d => {
         xml += `  <rte>\n    <name>Dia ${d.id} - ${d.titulo}</name>\n`;
-        d.paragens.forEach(p => {
-          xml += `    <rtept lat="${p.lat}" lon="${p.lon}"><name>${p.nome}</name></rtept>\n`;
+        (d.paragens || []).forEach(p => {
+          if (p.lat && p.lon) {
+            xml += `    <rtept lat="${p.lat}" lon="${p.lon}"><name>${p.nome}</name></rtept>\n`;
+          }
         });
         xml += `  </rte>\n`;
       });
@@ -1557,7 +2789,7 @@
     }
 
     function generateOfflineGuide() {
-      let html = `<!DOCTYPE html><html lang="pt"><head><meta charset="utf-8"><title>Guia de Bolso Offline — Viagem Piódão</title>
+      let html = `<!DOCTYPE html><html lang="pt"><head><meta charset="utf-8"><title>Guia de Bolso Offline — ${currentTrip.titulo}</title>
       <meta name="viewport" content="width=device-width,initial-scale=1">
       <style>
         body{font-family:system-ui,-apple-system,sans-serif;padding:16px;max-width:650px;margin:auto;color:#111;line-height:1.45}
@@ -1565,15 +2797,15 @@
         .meta{color:#666;font-size:0.85rem}table{width:100%;border-collapse:collapse;margin:8px 0;font-size:0.88rem}
         td{padding:5px 4px;border-bottom:1px solid #eee}.alert{background:#fff3cd;padding:8px 10px;border-radius:6px;margin:6px 0;font-weight:bold;font-size:0.85rem}
       </style></head><body>
-      <h1>🏍️ Guia de Bolso Offline — Viagem Piódão</h1>
-      <div class="meta">Cascais → Fátima → Coimbra → Góis → Piódão → Vieira → Óbidos · 635 km</div>
+      <h1>🏍️ Guia de Bolso Offline — ${currentTrip.titulo}</h1>
+      <div class="meta">${currentTrip.origemDestino || ''} · ${currentTrip.kmTotal || 0} km · ${currentTrip.mota || ''}</div>
       <div class="alert">Emergência Nacional: 112 · SNS 24: 808 24 24 24</div>`;
 
-      DIAS.forEach(d => {
+      (currentTrip.dias || []).forEach(d => {
         html += `<h2>Dia ${d.id} · ${d.dataFmt} — ${d.titulo}</h2>
-        <div class="meta">${d.km} km · ${d.paragens.map(p=>p.nome).join(' → ')}</div>
+        <div class="meta">${d.km} km · ${(d.paragens || []).map(p=>p.nome).join(' → ')}</div>
         <table>`;
-        d.horario.forEach(h => {
+        (d.horario || []).forEach(h => {
           html += `<tr><td style="width:50px;font-weight:bold">${h.hora}</td><td>${h.txt} <span class="meta">${h.det}</span></td></tr>`;
         });
         html += `</table>`;
