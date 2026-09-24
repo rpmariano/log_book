@@ -1,27 +1,26 @@
-# 🏍️ Road Log Moto — Viagem Piódão & Aldeias do Xisto
+# 🏍️ Road Log Moto — Diário de Bordo & PWA (Viagem Piódão)
 
-Aplicação mobile de alta performance desenhada especificamente para suporte de guiador de moto (Quad Lock, RAM Mount, SP Connect) ou utilização rápida na berma da estrada com luvas.
+Aplicação Web Progressiva (PWA) de alta performance, desenhada especificamente para suporte de guiador de moto (Quad Lock, RAM Mount, SP Connect) ou utilização rápida na berma da estrada com luvas.
 
----
-
-## 🚀 Como Usar no Telemóvel
-
-### Opção 1: Abrir Imediatamente como App Nativa (PWA) — Recomendado!
-1. Abre o ficheiro `index.html` no browser do teu telemóvel (Safari no iPhone ou Chrome no Android).
-2. **No iPhone (Safari)**: Toca no botão de **Partilhar (quadrado com seta para cima)** → Escolhe **"Adicionar ao Ecrã Principal"**.
-3. **No Android (Chrome)**: Toca nos 3 pontinhos no topo direito → Escolhe **"Instalar Aplicação"** ou **"Adicionar ao ecrã principal"**.
-4. A app fica instalada com o ícone 🏍️, abre em ecrã inteiro (sem barras de browser) e **funciona 100% offline**, mesmo nos vales sem qualquer rede móvel na Serra do Açor, Fajão e Piódão!
-
-*(Dica: Podes colocar a pasta no GitHub Pages, Vercel, Netlify ou enviar o ficheiro `index.html` para ti mesmo por WhatsApp / AirDrop).*
+🌐 **Acesso Online (GitHub Pages)**: [https://rpmariano.github.io/log_book/](https://rpmariano.github.io/log_book/)
 
 ---
 
-### Opção 2: Correr a Versão Streamlit Modernizada
-Se preferires correr a versão Python no computador ou alojar no Streamlit Community Cloud:
-```bash
-pip install streamlit folium streamlit-folium requests pillow
-streamlit run app_streamlit.py
-```
+## 📱 Como Instalar no Telemóvel (100% Offline)
+
+A app funciona como uma aplicação nativa no teu smartphone e **continua a funcionar sem qualquer rede móvel** (mesmo nas zonas sem cobertura da Serra do Açor, Fajão e Piódão):
+
+### No iPhone (Safari):
+1. Abre [https://rpmariano.github.io/log_book/](https://rpmariano.github.io/log_book/) no **Safari**.
+2. Toca no botão de **Partilhar** (ícone quadrado com a seta para cima na barra inferior).
+3. Seleciona **"Ecrã Principal"** (ou *"Adicionar ao Ecrã Principal"*).
+4. O ícone 🏍️ surge no ecrã do teu iPhone e abre em ecrã inteiro sem barras de browser!
+
+### No Android (Chrome):
+1. Abre [https://rpmariano.github.io/log_book/](https://rpmariano.github.io/log_book/) no **Chrome**.
+2. Toca no menu dos **3 pontinhos** no canto superior direito.
+3. Escolhe **"Instalar aplicação"** ou **"Adicionar ao ecrã inicial"**.
+4. A app fica instalada e funciona como app nativa.
 
 ---
 
@@ -33,23 +32,23 @@ streamlit run app_streamlit.py
    - **Modo Sol (Alto Contraste)**: Botão no topo para alternar entre Dark Mode e modo de luminosidade máxima para sol direto de verão/outono.
 
 2. **Cockpit do Momento**:
-   - Exibe a etapa ativa com quilometragem, tempo previsto e tipo de estrada (Autoestrada vs Curvas/Nacionais).
+   - Exibe a etapa ativa com quilometragem, tempo previsto e tipo de estrada.
    - Botões diretos para iniciar navegação em **Google Maps** (com paragens intermédias calculadas) ou **Waze**.
    - Cronograma com indicação automática de **AGORA** e **A SEGUIR**.
 
 3. **Diário de Bordo Rápido (Road Log)**:
    - **Ditado por Voz (Speech-to-Text)**: Toca no microfone e fala a nota diretamente pelo intercomunicador do capacete ou telemóvel.
    - **Chips Rápidos**: Regista com 1 toque (*"⛽ Abastecimento"*, *"☕ Café"*, *"🍽️ Almoço"*, *"📸 Foto"*, *"⚠️ Alerta"*).
-   - **Compressão Instantânea de Fotos**: As fotos da câmara são automaticamente reduzidas no telemóvel para ~200KB antes de guardar, poupando bateria e funcionando mesmo em 2G/EDGE.
-   - **Offline-First com Sincronização Supabase**: Guarda sempre primeiro no telemóvel (`localStorage`), sincronizando com a tua base de dados na nuvem assim que recuperares rede móvel.
+   - **Suporte Multimédia (Fotos & Vídeos)**: Fotos com compressão instantânea e upload de pequenos clips de vídeo.
+   - **Offline-First com Sincronização Supabase**: Guarda sempre primeiro no telemóvel (`localStorage`), sincronizando com a base de dados quando houver rede.
 
 4. **SOS & Coordenadas em Letra Gigante**:
-   - Mostra a latitude e longitude exatas com precisão em metros.
-   - Botão para **Copiar Coordenadas** e enviar por SMS/WhatsApp em caso de avaria.
-   - Chamada direta com 1 toque para o **112** e **SNS 24 (808 24 24 24)**.
-   - Calculadora rápida de abastecimento e autonomia.
+   - Latitude e longitude exatas com precisão em metros e texto de alto contraste para ditar por chamada.
+   - Botão para **Copiar Coordenadas** com 1 toque.
+   - Chamada direta para o **112** e **SNS 24 (808 24 24 24)**.
+   - Calculadora de autonomia e abastecimento.
 
 5. **GPS & Meteorologia**:
-   - Mapa interativo Leaflet com traçados de cada dia, postos de combustível críticos e botão *"Onde estou?"* com radar de localização.
+   - Mapa interativo Leaflet com traçados de cada dia, postos de combustível críticos e botão de radar *"Onde estou?"*.
    - Previsão de temperatura, probabilidade de chuva e vento nas paragens à hora prevista.
    - Exportação de ficheiros **GPX** para GPS de moto (Garmin Zumo, TomTom Rider, BMW Motorrad Connected, OsmAnd).

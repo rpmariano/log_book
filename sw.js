@@ -7,7 +7,7 @@ const ASSETS_TO_CACHE = [
   'https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
-  'https://unpkg.com/lucide@latest/dist/umd/lucide.js'
+  'https://unpkg.com/lucide@latest'
 ];
 
 self.addEventListener('install', (event) => {
@@ -47,7 +47,7 @@ self.addEventListener('fetch', (event) => {
         return cachedResponse;
       }
       return fetch(event.request).then((networkResponse) => {
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+        if (!networkResponse || networkResponse.status !== 200 || (networkResponse.type !== 'basic' && networkResponse.type !== 'cors')) {
           return networkResponse;
         }
         const responseToCache = networkResponse.clone();
