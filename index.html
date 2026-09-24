@@ -2585,10 +2585,27 @@
         syncNoteToSupabase(newNote);
       });
 
-      // Modal Nuvem (Supabase)
+      // ==========================================
+      // CONFIGURAÇÃO SUPABASE (DEFAULT & GESTÃO)
+      // ==========================================
+      const DEFAULT_SUPABASE_URL = 'https://gzaznohhnoiphsiobgvg.supabase.co';
+      const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6YXpub2hobm9pcGhzaW9iZ3ZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyODI2NzIsImV4cCI6MjEwNTg1ODY3Mn0.oL2l_Rn20cvfLwi-hchtNd5zbjRRKkgIfwEjoc6aU-A';
+
+      function getActiveSupabaseUrl() {
+        const stored = localStorage.getItem('roadlog_supa_url');
+        if (stored === 'none') return null;
+        return stored || DEFAULT_SUPABASE_URL;
+      }
+
+      function getActiveSupabaseKey() {
+        const stored = localStorage.getItem('roadlog_supa_key');
+        if (stored === 'none') return null;
+        return stored || DEFAULT_SUPABASE_KEY;
+      }
+
       function updateCloudStatusBadge() {
-        const url = localStorage.getItem('roadlog_supa_url');
-        const key = localStorage.getItem('roadlog_supa_key');
+        const url = getActiveSupabaseUrl();
+        const key = getActiveSupabaseKey();
         const badge = document.getElementById('cloudStatusText');
         if (!badge) return;
         if (url && key) {
@@ -2606,9 +2623,11 @@
       updateCloudStatusBadge();
 
       document.getElementById('btnOpenCloudModal').addEventListener('click', () => {
+        const curUrl = getActiveSupabaseUrl();
+        const curKey = getActiveSupabaseKey();
         document.getElementById('txtCloudCode').value = localStorage.getItem('roadlog_supa_code') || '';
-        document.getElementById('txtCloudUrl').value = localStorage.getItem('roadlog_supa_url') || '';
-        document.getElementById('txtCloudKey').value = localStorage.getItem('roadlog_supa_key') || '';
+        document.getElementById('txtCloudUrl').value = curUrl || '';
+        document.getElementById('txtCloudKey').value = curKey || '';
         const resBox = document.getElementById('cloudConnectionResult');
         if (resBox) resBox.classList.add('hidden');
         document.getElementById('modalCloud').classList.remove('hidden');
@@ -2621,8 +2640,8 @@
       // Testar Ligação Supabase
       document.getElementById('btnTestCloudConfig').addEventListener('click', async () => {
         haptic();
-        const url = document.getElementById('txtCloudUrl').value.trim().replace(/\/+$/, '');
-        const key = document.getElementById('txtCloudKey').value.trim();
+        const url = (document.getElementById('txtCloudUrl').value.trim() || DEFAULT_SUPABASE_URL).replace(/\/+$/, '');
+        const key = document.getElementById('txtCloudKey').value.trim() || DEFAULT_SUPABASE_KEY;
         const resBox = document.getElementById('cloudConnectionResult');
         resBox.classList.remove('hidden');
 
@@ -2633,26 +2652,50 @@
         }
 
         resBox.className = 'p-3 rounded-xl text-xs bg-blue-900 bg-opacity-40 text-blue-300 border border-blue-700';
-        resBox.textContent = '⏳ A testar ligação ao Supabase...';
+        resBox.textContent = '⏳ A testar ligação ao projeto Supabase...';
 
         try {
-          const resp = await fetch(`${url}/rest/v1/`, {
+          // 1. Testa autenticação e health da API
+          const respHealth = await fetch(`${url}/auth/v1/health`, {
             method: 'GET',
             headers: {
               'apikey': key,
               'Authorization': `Bearer ${key}`
             }
           });
-          if (resp.status === 200 || resp.ok || resp.status === 404) {
-            resBox.className = 'p-3 rounded-xl text-xs bg-green-900 bg-opacity-40 text-green-300 border border-green-700';
-            resBox.textContent = '✅ Ligação ao Supabase estabelecida com sucesso!';
-          } else {
+
+          if (!respHealth.ok && respHealth.status !== 200) {
             resBox.className = 'p-3 rounded-xl text-xs bg-red-900 bg-opacity-40 text-red-300 border border-red-700';
-            resBox.textContent = `❌ Supabase respondeu com HTTP ${resp.status}. Confirma a Anon Key.`;
+            resBox.textContent = `❌ Supabase recusou as credenciais (HTTP ${respHealth.status}). Verifica o URL e a Anon Key.`;
+            return;
           }
+
+          // 2. Testa se a função RPC de gravação de notas já está criada no SQL Editor
+          let rpcStatus = null;
+          try {
+            const respRpc = await fetch(`${url}/rest/v1/rpc/roadlog_nota_criar`, {
+              method: 'POST',
+              headers: {
+                'apikey': key,
+                'Authorization': `Bearer ${key}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ p_codigo: 'ping', p_dia: 1, p_texto: 'ping', p_autor: 'test' })
+            });
+            rpcStatus = respRpc.status;
+          } catch(e) {}
+
+          if (rpcStatus === 404) {
+            resBox.className = 'p-3 rounded-xl text-xs bg-yellow-950 bg-opacity-60 text-yellow-200 border border-yellow-600 leading-relaxed';
+            resBox.innerHTML = '⚠️ <b>Projeto ligado com sucesso!</b><br>Falta executar o script SQL no SQL Editor do Supabase para criar as tabelas e funções do diário.';
+            return;
+          }
+
+          resBox.className = 'p-3 rounded-xl text-xs bg-green-900 bg-opacity-40 text-green-300 border border-green-700';
+          resBox.textContent = '✅ Projeto Supabase ligado e tabelas prontas para sincronização!';
         } catch (err) {
           resBox.className = 'p-3 rounded-xl text-xs bg-red-900 bg-opacity-40 text-red-300 border border-red-700';
-          resBox.textContent = '❌ Não foi possível contactar o URL. Verifica se o endereço https://... está correto.';
+          resBox.textContent = '❌ Não foi possível contactar o URL. Verifica o endereço e a ligação à internet.';
         }
       });
 
@@ -2677,8 +2720,8 @@
         haptic();
         if (confirm('Desejas desvincular o projeto Supabase? Os teus registos locais e viagens continuarão 100% preservados no telemóvel.')) {
           localStorage.removeItem('roadlog_supa_code');
-          localStorage.removeItem('roadlog_supa_url');
-          localStorage.removeItem('roadlog_supa_key');
+          localStorage.setItem('roadlog_supa_url', 'none');
+          localStorage.setItem('roadlog_supa_key', 'none');
           document.getElementById('txtCloudCode').value = '';
           document.getElementById('txtCloudUrl').value = '';
           document.getElementById('txtCloudKey').value = '';
@@ -2778,8 +2821,8 @@
 
     async function syncNoteToSupabase(note) {
       const code = localStorage.getItem('roadlog_supa_code') || 'geral';
-      const url = localStorage.getItem('roadlog_supa_url');
-      const key = localStorage.getItem('roadlog_supa_key');
+      const url = getActiveSupabaseUrl();
+      const key = getActiveSupabaseKey();
       if (!url || !key) return;
 
       try {
@@ -2799,7 +2842,7 @@
           })
         });
       } catch (err) {
-        console.log('Sync nuvem adiado (offline)');
+        console.log('Sync nuvem adiado (offline ou função por criar)');
       }
     }
 
